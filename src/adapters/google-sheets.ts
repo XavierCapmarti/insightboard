@@ -43,7 +43,7 @@ export class GoogleSheetsAdapter extends BaseAdapter<SheetsRawData> {
     const warnings: string[] = [];
 
     try {
-      const sheetsConfig = config.settings as GoogleSheetsConfig;
+      const sheetsConfig = config.settings as unknown as GoogleSheetsConfig;
 
       if (!sheetsConfig.spreadsheetId) {
         return {

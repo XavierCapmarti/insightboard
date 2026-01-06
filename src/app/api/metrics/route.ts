@@ -6,10 +6,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createMetricsEngine, createPeriod, getPreviousPeriod } from '@/engine';
-import { MetricDefinition, PeriodType, Record } from '@/types/core';
+import { MetricDefinition, PeriodType, DataRecord } from '@/types/core';
 
 // Mock data store - in production, this would be a database
-const mockRecords: Record[] = [
+const mockRecords: DataRecord[] = [
   {
     id: '1',
     ownerId: 'sarah.m',

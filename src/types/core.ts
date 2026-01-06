@@ -12,7 +12,7 @@
  * A generic record representing any tracked entity
  * (e.g., deal, order, ticket, project, lead)
  */
-export interface Record {
+export interface DataRecord {
   id: string;
   externalId?: string; // Original ID from source system
   ownerId: string; // Actor who owns/manages this record
@@ -96,7 +96,7 @@ export interface DataSourceConfig {
 
 export interface FieldMapping {
   sourceField: string;
-  targetField: keyof Record | string; // Core field or custom
+  targetField: keyof DataRecord | string; // Core field or custom
   transform?: FieldTransform;
 }
 

@@ -18,7 +18,7 @@ import {
   TransformError,
 } from '@/types/adapters';
 import {
-  Record,
+  DataRecord,
   StageEvent,
   Actor,
   DataSourceConfig,
@@ -47,7 +47,7 @@ export abstract class BaseAdapter<TRawData = unknown>
     rawData: TRawData,
     mappings: FieldMapping[]
   ): Promise<NormaliseResult> {
-    const records: Record[] = [];
+    const records: DataRecord[] = [];
     const stageEvents: StageEvent[] = [];
     const actors: Actor[] = [];
     const unmappedFields: string[] = [];
@@ -189,7 +189,7 @@ export abstract class BaseAdapter<TRawData = unknown>
     const sampleRows = rows.slice(0, limit);
     const transformErrors: TransformError[] = [];
 
-    const records: Record[] = [];
+    const records: DataRecord[] = [];
     for (let i = 0; i < sampleRows.length; i++) {
       const record = this.rowToRecord(
         sampleRows[i],
@@ -258,8 +258,8 @@ export abstract class BaseAdapter<TRawData = unknown>
     mappings: FieldMapping[],
     rowIndex: number,
     errors: TransformError[]
-  ): Record | null {
-    const record: Partial<Record> = {
+  ): DataRecord | null {
+    const record: Partial<DataRecord> = {
       id: uuid(),
       metadata: {
         source: this.type,
@@ -334,7 +334,7 @@ export abstract class BaseAdapter<TRawData = unknown>
     if (!record.ownerId) record.ownerId = 'unassigned';
     if (!record.status) record.status = 'unknown';
 
-    return record as Record;
+    return record as DataRecord;
   }
 
   /**

@@ -5,7 +5,7 @@
  */
 
 import {
-  Record,
+  DataRecord,
   StageEvent,
   MetricDefinition,
   MetricValue,
@@ -40,10 +40,10 @@ import {
 // =============================================================================
 
 export class MetricsEngine {
-  private records: Record[];
+  private records: DataRecord[];
   private stageEvents: StageEvent[];
 
-  constructor(records: Record[], stageEvents: StageEvent[] = []) {
+  constructor(records: DataRecord[], stageEvents: StageEvent[] = []) {
     this.records = records;
     this.stageEvents = stageEvents;
   }
@@ -127,7 +127,7 @@ export class MetricsEngine {
   // =============================================================================
 
   private aggregate(
-    records: Record[],
+    records: DataRecord[],
     aggregation: AggregationType,
     formula: MetricDefinition['formula']
   ): number | null {
@@ -166,7 +166,7 @@ export class MetricsEngine {
     }
   }
 
-  private sum(records: Record[], formula: MetricDefinition['formula']): number {
+  private sum(records: DataRecord[], formula: MetricDefinition['formula']): number {
     let total = 0;
 
     for (const record of records) {
@@ -180,7 +180,7 @@ export class MetricsEngine {
   }
 
   private extremum(
-    records: Record[],
+    records: DataRecord[],
     formula: MetricDefinition['formula'],
     type: 'min' | 'max'
   ): number | null {
@@ -199,7 +199,7 @@ export class MetricsEngine {
   }
 
   private median(
-    records: Record[],
+    records: DataRecord[],
     formula: MetricDefinition['formula']
   ): number | null {
     const values: number[] = [];
@@ -222,7 +222,7 @@ export class MetricsEngine {
   }
 
   private conversionRate(
-    records: Record[],
+    records: DataRecord[],
     formula: MetricDefinition['formula']
   ): number {
     if (records.length === 0) return 0;
@@ -239,7 +239,7 @@ export class MetricsEngine {
   }
 
   private cycleTime(
-    records: Record[],
+    records: DataRecord[],
     formula: MetricDefinition['formula']
   ): number | null {
     const durations: number[] = [];
@@ -266,14 +266,14 @@ export class MetricsEngine {
   // FILTERING
   // =============================================================================
 
-  private filterByPeriod(records: Record[], period: Period): Record[] {
+  private filterByPeriod(records: DataRecord[], period: Period): DataRecord[] {
     return records.filter((record) => {
       const date = record.createdAt;
       return date >= period.start && date <= period.end;
     });
   }
 
-  private applyFilters(records: Record[], filters: MetricFilter[]): Record[] {
+  private applyFilters(records: DataRecord[], filters: MetricFilter[]): DataRecord[] {
     if (filters.length === 0) return records;
 
     return records.filter((record) => {
@@ -315,14 +315,14 @@ export class MetricsEngine {
   // =============================================================================
 
   private calculateBreakdown(
-    records: Record[],
+    records: DataRecord[],
     groupByField: string,
     aggregation: AggregationType,
     formula: MetricDefinition['formula'],
     formatConfig: MetricDefinition['format']
   ): MetricBreakdown[] {
     // Group records by field
-    const groups = new Map<string, Record[]>();
+    const groups = new Map<string, DataRecord[]>();
 
     for (const record of records) {
       const groupKey = String(this.getNestedValue(record, groupByField) ?? 'Other');
@@ -393,7 +393,7 @@ export class MetricsEngine {
   // =============================================================================
 
   private getFieldValue(
-    record: Record,
+    record: DataRecord,
     formula: MetricDefinition['formula']
   ): unknown {
     if (formula.type === 'field' && formula.field) {
@@ -543,7 +543,7 @@ export function getPreviousPeriod(period: Period): Period {
 // =============================================================================
 
 export function createMetricsEngine(
-  records: Record[],
+  records: DataRecord[],
   stageEvents?: StageEvent[]
 ): MetricsEngine {
   return new MetricsEngine(records, stageEvents);

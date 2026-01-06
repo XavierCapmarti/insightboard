@@ -4,7 +4,7 @@
  * Computes funnel/pipeline progression metrics
  */
 
-import { Record, StageEvent, Period } from '@/types/core';
+import { DataRecord, StageEvent, Period } from '@/types/core';
 import { differenceInMilliseconds } from 'date-fns';
 
 // =============================================================================
@@ -47,12 +47,12 @@ export interface StageTransition {
 // =============================================================================
 
 export class FunnelEngine {
-  private records: Record[];
+  private records: DataRecord[];
   private stageEvents: StageEvent[];
   private stages: FunnelStage[];
 
   constructor(
-    records: Record[],
+    records: DataRecord[],
     stageEvents: StageEvent[],
     stages: FunnelStage[]
   ) {
@@ -203,7 +203,7 @@ export class FunnelEngine {
   /**
    * Calculate how many records reached each stage (cumulative)
    */
-  private calculateCumulativeCounts(records: Record[]): Map<string, number> {
+  private calculateCumulativeCounts(records: DataRecord[]): Map<string, number> {
     const counts = new Map<string, number>();
 
     // For each record, mark all stages it has reached
@@ -225,7 +225,7 @@ export class FunnelEngine {
   /**
    * Check if a record has reached a specific stage
    */
-  private hasReachedStage(record: Record, stageName: string): boolean {
+  private hasReachedStage(record: DataRecord, stageName: string): boolean {
     const targetOrder = this.getStageOrder(stageName);
     const currentOrder = this.getStageOrder(record.status);
     return currentOrder >= targetOrder;
@@ -264,7 +264,7 @@ export class FunnelEngine {
   /**
    * Calculate average total cycle time (created to closed)
    */
-  private calculateAverageCycleTime(records: Record[]): number | null {
+  private calculateAverageCycleTime(records: DataRecord[]): number | null {
     const cycleTimes: number[] = [];
 
     for (const record of records) {
@@ -287,7 +287,7 @@ export class FunnelEngine {
 // =============================================================================
 
 export function createFunnelEngine(
-  records: Record[],
+  records: DataRecord[],
   stageEvents: StageEvent[],
   stages: FunnelStage[]
 ): FunnelEngine {
@@ -297,7 +297,7 @@ export function createFunnelEngine(
 /**
  * Create stages from unique statuses in records
  */
-export function inferStagesFromRecords(records: Record[]): FunnelStage[] {
+export function inferStagesFromRecords(records: DataRecord[]): FunnelStage[] {
   const uniqueStatuses = new Set<string>();
 
   for (const record of records) {

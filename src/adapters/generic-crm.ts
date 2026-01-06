@@ -46,7 +46,7 @@ export class GenericCRMAdapter extends BaseAdapter<CRMRawData> {
     const warnings: string[] = [];
 
     try {
-      const crmConfig = config.settings as GenericCRMConfig;
+      const crmConfig = config.settings as unknown as GenericCRMConfig;
 
       if (!crmConfig.apiEndpoint) {
         return {

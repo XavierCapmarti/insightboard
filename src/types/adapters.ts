@@ -5,7 +5,7 @@
  */
 
 import {
-  Record,
+  DataRecord,
   StageEvent,
   Actor,
   DataSourceConfig,
@@ -85,7 +85,7 @@ export interface IngestResult<T = unknown> {
 }
 
 export interface NormaliseResult {
-  records: Record[];
+  records: DataRecord[];
   stageEvents: StageEvent[];
   actors: Actor[];
   unmappedFields: string[];
@@ -121,7 +121,7 @@ export interface ValidationIssue {
 }
 
 export interface PreviewResult {
-  records: Record[];
+  records: DataRecord[];
   sampleSize: number;
   totalEstimated: number;
   fieldStats: FieldStats[];
@@ -143,7 +143,7 @@ export interface DetectedSchema {
 
 export interface DetectedField {
   name: string;
-  type: 'string' | 'number' | 'date' | 'boolean' | 'array' | 'object';
+  type: 'string' | 'number' | 'date' | 'boolean' | 'array' | 'object' | 'mixed';
   nullable: boolean;
   sampleValues: unknown[];
 }

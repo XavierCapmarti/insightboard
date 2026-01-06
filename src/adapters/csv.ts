@@ -41,7 +41,7 @@ export class CSVUploadAdapter extends BaseAdapter<CSVRawData> {
     try {
       // In a real implementation, this would read from uploaded file
       // For now, we expect the CSV content in config.settings.content
-      const csvConfig = config.settings as CSVUploadConfig & {
+      const csvConfig = config.settings as unknown as CSVUploadConfig & {
         content?: string;
       };
       const content = csvConfig.content || '';
