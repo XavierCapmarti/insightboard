@@ -8,26 +8,32 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Brand colors - modern SaaS palette
+        // Brand colors - dark, sober, edgy with better contrast
         brand: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
+          50: '#f5f5f5',
+          100: '#e5e5e5',
+          200: '#d4d4d4',
+          300: '#a3a3a3',
+          400: '#737373',
+          500: '#525252',
+          600: '#404040',
+          700: '#262626',
+          800: '#171717',
+          900: '#0a0a0a',
+          950: '#ffffff',
         },
-        // Semantic colors
+        // Semantic colors - dark theme with grey/white contrast
         surface: {
-          DEFAULT: '#ffffff',
-          secondary: '#f8fafc',
-          tertiary: '#f1f5f9',
-          dark: '#0f172a',
+          DEFAULT: '#171717',
+          secondary: '#262626',
+          tertiary: '#404040',
+          dark: '#0a0a0a',
+        },
+        // Text colors for dark theme
+        text: {
+          primary: '#ffffff',
+          secondary: '#d4d4d4',
+          tertiary: '#a3a3a3',
         },
       },
       fontFamily: {

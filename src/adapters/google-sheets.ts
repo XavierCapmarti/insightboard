@@ -143,46 +143,35 @@ export class GoogleSheetsAdapter extends BaseAdapter<SheetsRawData> {
 
   /**
    * Fetch sheet data using Google Sheets API
-   * This is a placeholder - implement with actual API calls
    */
   private async fetchSheetData(
     config: GoogleSheetsConfig
   ): Promise<SheetsRawData> {
-    // TODO: Implement Google Sheets API integration
-    // This requires:
-    // 1. OAuth2 token or Service Account credentials
-    // 2. googleapis library
-    // 3. Proper error handling for rate limits
+    // Use the sheets client to fetch data
+    const { sheetsClient } = await import('@/lib/sheets');
+    
+    if (!config.spreadsheetId) {
+      throw new Error('Spreadsheet ID is required');
+    }
 
-    // For now, throw an error indicating this needs implementation
-    throw new Error(
-      'Google Sheets integration requires OAuth setup. ' +
-        'Please configure credentials in environment variables.'
-    );
+    const range = config.range || config.sheetName || 'Sheet1';
+    const fullRange = range.includes('!') ? range : `${range}!A:Z`;
 
-    // Example implementation structure:
-    /*
-    const auth = new google.auth.OAuth2();
-    auth.setCredentials({ refresh_token: config.refreshToken });
+    // Fetch data from sheet
+    const values = await sheetsClient.readRange(config.spreadsheetId, fullRange);
     
-    const sheets = google.sheets({ version: 'v4', auth });
-    
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: config.spreadsheetId,
-      range: config.range || config.sheetName || 'Sheet1',
-    });
-    
-    const values = response.data.values || [];
-    const headers = config.hasHeaderRow ? values[0] : values[0].map((_, i) => `column_${i}`);
-    const dataRows = config.hasHeaderRow ? values.slice(1) : values;
-    
-    const rows = dataRows.map(row => {
-      const record: Record<string, string> = {};
-      headers.forEach((header, i) => {
-        record[header] = row[i] ?? '';
-      });
-      return record;
-    });
+    if (!values || values.length === 0) {
+      return {
+        spreadsheetId: config.spreadsheetId,
+        sheetName: config.sheetName || 'Sheet1',
+        headers: [],
+        rows: [],
+        rowCount: 0,
+      };
+    }
+
+    // Convert to our format
+    const { headers, rows } = sheetsClient.convertToCSVFormat(values);
     
     return {
       spreadsheetId: config.spreadsheetId,
@@ -191,7 +180,6 @@ export class GoogleSheetsAdapter extends BaseAdapter<SheetsRawData> {
       rows,
       rowCount: rows.length,
     };
-    */
   }
 
   /**

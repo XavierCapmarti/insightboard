@@ -17,7 +17,7 @@ html {
 }
 
 body {
-  @apply bg-surface text-slate-900;
+  @apply bg-surface text-text-primary;
 }
 
 /* Smooth scrolling */
@@ -25,23 +25,23 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Focus styles */
+/* Focus styles - dark theme */
 *:focus-visible {
-  @apply outline-2 outline-offset-2 outline-brand-500;
+  @apply outline-2 outline-offset-2 outline-brand-950;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - dark theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-slate-100 rounded-full;
+  @apply bg-surface-secondary rounded-full;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 rounded-full hover:bg-slate-400;
+  @apply bg-surface-tertiary rounded-full hover:bg-brand-400;
 }
 
 /* Animation utilities */
@@ -82,13 +82,13 @@ html {
   @apply shadow-lg -translate-y-0.5;
 }
 
-/* Gradient text */
+/* Gradient text - subtle for dark theme */
 .gradient-text {
-  @apply bg-gradient-to-r from-brand-600 to-brand-400 bg-clip-text text-transparent;
+  @apply text-brand-950;
 }
 
-/* Glass effect */
+/* Glass effect - dark theme */
 .glass {
-  @apply bg-white/80 backdrop-blur-md border border-white/20;
+  @apply bg-surface-secondary/80 backdrop-blur-md border border-surface-tertiary/50;
 }
 

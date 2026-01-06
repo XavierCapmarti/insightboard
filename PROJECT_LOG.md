@@ -1,6 +1,6 @@
-# InsightBoard - Project Log
+# ClarLens - Project Log
 
-Personal side project: Plug-and-play analytics SaaS for SMEs.
+Personal side project: CSV to insights in 5 minutes.
 
 ---
 
@@ -32,6 +32,19 @@ Personal side project: Plug-and-play analytics SaaS for SMEs.
 - Created .env.example with documented vars
 - Added /api/test-email endpoint
 - Ready for personal Vercel deployment
+
+### 2025-01-06 - Renamed to ClarLens + Track A Complete
+- Renamed InsightBoard → ClarLens across codebase
+- Applied dark, sober, edgy theme (charcoal surfaces, subtle contrast)
+- Built CSV → insight flow:
+  - Landing page with "Upload CSV" + "Try sample CSV"
+  - Drag & drop upload with validation
+  - Auto-suggest field mapping (stage, date, owner, value)
+  - Preview with first 20 rows + summary
+  - Dashboard with real computed metrics from CSV
+  - Magic moment insight (biggest drop-off detection)
+- Sample CSV dataset created (50 rows)
+- All metrics computed from actual CSV data (no placeholders)
 
 ---
 

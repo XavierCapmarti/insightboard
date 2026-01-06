@@ -1,601 +1,546 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowLeft,
   ArrowRight,
   BarChart3,
-  FileSpreadsheet,
   Upload,
-  Globe,
   Check,
-  ChevronRight,
   Loader2,
   AlertCircle,
+  FileSpreadsheet,
+  X,
 } from 'lucide-react';
 
-// =============================================================================
-// TYPES
-// =============================================================================
+type Step = 'upload' | 'map' | 'preview';
 
-type Step = 'source' | 'connect' | 'map' | 'preview' | 'launch';
-
-interface DataSource {
-  id: string;
-  name: string;
-  icon: React.ElementType;
-  description: string;
-  available: boolean;
+interface CSVRow {
+  [key: string]: string;
 }
 
-// =============================================================================
-// DATA
-// =============================================================================
-
-const DATA_SOURCES: DataSource[] = [
-  {
-    id: 'csv',
-    name: 'CSV Upload',
-    icon: Upload,
-    description: 'Upload a CSV or Excel file',
-    available: true,
-  },
-  {
-    id: 'google_sheets',
-    name: 'Google Sheets',
-    icon: FileSpreadsheet,
-    description: 'Connect to a Google Spreadsheet',
-    available: true,
-  },
-  {
-    id: 'crm',
-    name: 'CRM / API',
-    icon: Globe,
-    description: 'Connect via REST API',
-    available: true,
-  },
-];
-
-const STEPS: { id: Step; label: string }[] = [
-  { id: 'source', label: 'Data Source' },
-  { id: 'connect', label: 'Connect' },
-  { id: 'map', label: 'Map Fields' },
-  { id: 'preview', label: 'Preview' },
-  { id: 'launch', label: 'Launch' },
-];
-
-// =============================================================================
-// COMPONENTS
-// =============================================================================
-
-function StepIndicator({ 
-  steps, 
-  currentStep 
-}: { 
-  steps: typeof STEPS; 
-  currentStep: Step;
-}) {
-  const currentIndex = steps.findIndex(s => s.id === currentStep);
-  
-  return (
-    <div className="flex items-center gap-2">
-      {steps.map((step, index) => {
-        const isComplete = index < currentIndex;
-        const isCurrent = index === currentIndex;
-        
-        return (
-          <div key={step.id} className="flex items-center">
-            <div 
-              className={`
-                w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors
-                ${isComplete ? 'bg-brand-500 text-white' : ''}
-                ${isCurrent ? 'bg-brand-100 text-brand-700 ring-2 ring-brand-500' : ''}
-                ${!isComplete && !isCurrent ? 'bg-slate-100 text-slate-400' : ''}
-              `}
-            >
-              {isComplete ? <Check className="w-4 h-4" /> : index + 1}
-            </div>
-            {index < steps.length - 1 && (
-              <div 
-                className={`w-12 h-0.5 mx-2 ${
-                  isComplete ? 'bg-brand-500' : 'bg-slate-200'
-                }`}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
+interface FieldMapping {
+  sourceField: string;
+  targetField: string;
+  required: boolean;
 }
 
-function SourceStep({ 
-  onSelect 
-}: { 
-  onSelect: (sourceId: string) => void;
-}) {
-  return (
-    <div className="animate-in">
-      <h2 className="text-2xl font-bold text-slate-900 mb-2">
-        Choose your data source
-      </h2>
-      <p className="text-slate-600 mb-8">
-        Select how you'd like to import your data. You can add more sources later.
-      </p>
-      
-      <div className="grid gap-4">
-        {DATA_SOURCES.map((source) => (
-          <button
-            key={source.id}
-            onClick={() => source.available && onSelect(source.id)}
-            disabled={!source.available}
-            className={`
-              flex items-center gap-4 p-4 rounded-xl border text-left transition-all
-              ${source.available 
-                ? 'bg-white border-slate-200 hover:border-brand-300 hover:shadow-md cursor-pointer' 
-                : 'bg-slate-50 border-slate-100 cursor-not-allowed opacity-60'}
-            `}
-          >
-            <div className="w-12 h-12 rounded-xl bg-brand-50 flex items-center justify-center flex-shrink-0">
-              <source.icon className="w-6 h-6 text-brand-600" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-slate-900">
-                {source.name}
-                {!source.available && (
-                  <span className="ml-2 text-xs font-normal text-slate-400">
-                    Coming soon
-                  </span>
-                )}
-              </h3>
-              <p className="text-sm text-slate-600">{source.description}</p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-slate-400" />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ConnectStep({ 
-  sourceId,
-  onNext,
-  onBack,
-}: { 
-  sourceId: string;
-  onNext: () => void;
-  onBack: () => void;
-}) {
-  const [isLoading, setIsLoading] = useState(false);
+function OnboardingContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [step, setStep] = useState<Step>('upload');
   const [file, setFile] = useState<File | null>(null);
+  const [csvData, setCsvData] = useState<CSVRow[]>([]);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [mappings, setMappings] = useState<FieldMapping[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropZoneRef = useRef<HTMLDivElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
+  const parseCSV = (text: string): CSVRow[] => {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) throw new Error('CSV must have at least a header and one data row');
+    
+    const headers = lines[0].split(',').map(h => h.trim());
+    const rows: CSVRow[] = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',');
+      const row: CSVRow = {};
+      headers.forEach((header, idx) => {
+        row[header] = values[idx]?.trim() || '';
+      });
+      rows.push(row);
+    }
+    
+    return rows;
+  };
+
+  const autoSuggestMappings = (sourceHeaders: string[]): FieldMapping[] => {
+    const suggestions: FieldMapping[] = [];
+    
+    sourceHeaders.forEach(header => {
+      const lower = header.toLowerCase();
+      let target = '';
+      let required = false;
+      
+      // Auto-match common patterns
+      if (lower.includes('stage') || lower.includes('status') || lower.includes('state')) {
+        target = 'status';
+        required = true;
+      } else if (lower.includes('created') || lower.includes('date') || lower.includes('timestamp')) {
+        target = 'createdAt';
+        required = true;
+      } else if (lower.includes('owner') || lower.includes('assigned') || lower.includes('person') || lower.includes('rep')) {
+        target = 'ownerId';
+        required = false;
+      } else if (lower.includes('value') || lower.includes('amount') || lower.includes('revenue') || lower.includes('price')) {
+        target = 'value';
+        required = false;
+      }
+      
+      if (target) {
+        suggestions.push({
+          sourceField: header,
+          targetField: target,
+          required,
+        });
+      }
+    });
+    
+    return suggestions;
+  };
+
+  const processFile = async (selectedFile: File) => {
+    setError(null);
+    setIsLoading(true);
+    
+    try {
+      const text = await selectedFile.text();
+      
+      if (!text.trim()) {
+        throw new Error('File is empty');
+      }
+      
+      const rows = parseCSV(text);
+      
+      if (rows.length === 0) {
+        throw new Error('No data rows found');
+      }
+      
+      const detectedHeaders = Object.keys(rows[0]);
+      
       setFile(selectedFile);
+      setCsvData(rows);
+      setHeaders(detectedHeaders);
+      
+      // Auto-suggest mappings
+      const suggestedMappings = autoSuggestMappings(detectedHeaders);
+      setMappings(suggestedMappings);
+      
+      setIsLoading(false);
+      setStep('map');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to parse CSV');
+      setIsLoading(false);
     }
   };
 
-  const handleConnect = async () => {
+  const loadSampleCSV = async (sampleFile: string) => {
     setIsLoading(true);
-    // Simulate connection
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsLoading(false);
-    onNext();
+    setError(null);
+    try {
+      const filename = sampleFile === 'true' ? 'sample-data.csv' : sampleFile;
+      console.log('Loading sample CSV:', filename);
+      const response = await fetch(`/${filename}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch: ${response.status}`);
+      }
+      const text = await response.text();
+      console.log('CSV loaded, length:', text.length);
+      const blob = new Blob([text], { type: 'text/csv' });
+      const file = new File([blob], filename, { type: 'text/csv' });
+      await processFile(file);
+    } catch (err) {
+      console.error('Error loading sample CSV:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load sample CSV');
+      setIsLoading(false);
+    }
+  };
+
+  // Load sample CSV if requested
+  useEffect(() => {
+    const sampleParam = searchParams.get('sample');
+    if (sampleParam && csvData.length === 0) {
+      loadSampleCSV(sampleParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    if (selectedFile) {
+      processFile(selectedFile);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const droppedFile = e.dataTransfer.files[0];
+    if (droppedFile && droppedFile.type === 'text/csv' || droppedFile.name.endsWith('.csv')) {
+      processFile(droppedFile);
+    } else {
+      setError('Please upload a CSV file');
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleMappingChange = (sourceField: string, targetField: string) => {
+    setMappings(prev => prev.map(m => 
+      m.sourceField === sourceField ? { ...m, targetField } : m
+    ));
+  };
+
+  const canProceed = () => {
+    const hasStatus = mappings.some(m => m.targetField === 'status' && m.sourceField);
+    const hasDate = mappings.some(m => m.targetField === 'createdAt' && m.sourceField);
+    return hasStatus && hasDate;
+  };
+
+  const handlePreview = () => {
+    // Store data in sessionStorage for dashboard
+    sessionStorage.setItem('clarLensCSVData', JSON.stringify(csvData));
+    sessionStorage.setItem('clarLensMappings', JSON.stringify(mappings));
+    setStep('preview');
+  };
+
+  const handleLaunch = () => {
+    router.push('/dashboard');
   };
 
   return (
-    <div className="animate-in">
-      <h2 className="text-2xl font-bold text-slate-900 mb-2">
-        Connect your data
-      </h2>
-      <p className="text-slate-600 mb-8">
-        {sourceId === 'csv' && 'Upload your CSV file to get started.'}
-        {sourceId === 'google_sheets' && 'Paste your Google Sheets URL.'}
-        {sourceId === 'crm' && 'Enter your API endpoint and credentials.'}
-      </p>
-
-      {sourceId === 'csv' && (
-        <div className="mb-8">
-          <div 
-            className={`
-              border-2 border-dashed rounded-xl p-8 text-center transition-colors
-              ${file ? 'border-brand-300 bg-brand-50' : 'border-slate-200 hover:border-slate-300'}
-            `}
-          >
-            <input
-              type="file"
-              accept=".csv,.tsv,.txt"
-              onChange={handleFileChange}
-              className="hidden"
-              id="file-upload"
-            />
-            <label htmlFor="file-upload" className="cursor-pointer">
-              <Upload className={`w-8 h-8 mx-auto mb-4 ${file ? 'text-brand-500' : 'text-slate-400'}`} />
-              {file ? (
-                <div>
-                  <p className="font-medium text-slate-900">{file.name}</p>
-                  <p className="text-sm text-slate-500 mt-1">
-                    {(file.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-              ) : (
-                <div>
-                  <p className="font-medium text-slate-900">
-                    Drop your file here or click to browse
-                  </p>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Supports CSV, TSV, and TXT files
-                  </p>
-                </div>
-              )}
-            </label>
-          </div>
-        </div>
-      )}
-
-      {sourceId === 'google_sheets' && (
-        <div className="mb-8">
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Google Sheets URL
-          </label>
-          <input
-            type="url"
-            placeholder="https://docs.google.com/spreadsheets/d/..."
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
-          />
-          <p className="text-sm text-slate-500 mt-2">
-            Make sure your sheet is shared with view access.
-          </p>
-        </div>
-      )}
-
-      {sourceId === 'crm' && (
-        <div className="space-y-4 mb-8">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              API Endpoint
-            </label>
-            <input
-              type="url"
-              placeholder="https://api.yourcrm.com/v1/records"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              API Key
-            </label>
-            <input
-              type="password"
-              placeholder="••••••••••••••••"
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 transition-all"
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-        <button
-          onClick={handleConnect}
-          disabled={isLoading || (sourceId === 'csv' && !file)}
-          className="flex items-center gap-2 px-6 py-3 bg-brand-500 text-white font-medium rounded-xl hover:bg-brand-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Connecting...
-            </>
-          ) : (
-            <>
-              Connect
-              <ArrowRight className="w-4 h-4" />
-            </>
-          )}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function MapStep({ 
-  onNext,
-  onBack,
-}: { 
-  onNext: () => void;
-  onBack: () => void;
-}) {
-  const sampleFields = [
-    { source: 'ID', suggested: 'id', confidence: 95 },
-    { source: 'Customer Name', suggested: 'name', confidence: 90 },
-    { source: 'Assigned To', suggested: 'ownerId', confidence: 85 },
-    { source: 'Amount', suggested: 'value', confidence: 92 },
-    { source: 'Status', suggested: 'status', confidence: 88 },
-    { source: 'Created Date', suggested: 'createdAt', confidence: 95 },
-  ];
-
-  return (
-    <div className="animate-in">
-      <h2 className="text-2xl font-bold text-slate-900 mb-2">
-        Map your fields
-      </h2>
-      <p className="text-slate-600 mb-8">
-        We've auto-detected your fields. Review and adjust the mappings as needed.
-      </p>
-
-      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-        <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="font-medium text-emerald-900">Auto-mapping complete</p>
-          <p className="text-sm text-emerald-700">
-            6 of 6 fields were automatically matched. Review below.
-          </p>
-        </div>
-      </div>
-
-      <div className="border border-slate-200 rounded-xl overflow-hidden mb-8">
-        <div className="grid grid-cols-3 gap-4 p-4 bg-slate-50 border-b border-slate-200 text-sm font-medium text-slate-600">
-          <div>Source Field</div>
-          <div>Maps To</div>
-          <div>Confidence</div>
-        </div>
-        {sampleFields.map((field) => (
-          <div 
-            key={field.source}
-            className="grid grid-cols-3 gap-4 p-4 border-b border-slate-100 last:border-b-0"
-          >
-            <div className="font-medium text-slate-900">{field.source}</div>
-            <div>
-              <select className="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
-                <option value={field.suggested}>{field.suggested}</option>
-                <option value="id">id</option>
-                <option value="ownerId">ownerId</option>
-                <option value="value">value</option>
-                <option value="status">status</option>
-                <option value="createdAt">createdAt</option>
-                <option value="custom">Custom field...</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-500 rounded-full"
-                  style={{ width: `${field.confidence}%` }}
-                />
-              </div>
-              <span className="text-sm text-slate-600">{field.confidence}%</span>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-        <button
-          onClick={onNext}
-          className="flex items-center gap-2 px-6 py-3 bg-brand-500 text-white font-medium rounded-xl hover:bg-brand-600 transition-colors"
-        >
-          Continue
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function PreviewStep({ 
-  onNext,
-  onBack,
-}: { 
-  onNext: () => void;
-  onBack: () => void;
-}) {
-  const previewMetrics = [
-    { label: 'Total Records', value: '1,247' },
-    { label: 'Unique Owners', value: '12' },
-    { label: 'Total Value', value: '$847,230' },
-    { label: 'Avg Value', value: '$679' },
-  ];
-
-  return (
-    <div className="animate-in">
-      <h2 className="text-2xl font-bold text-slate-900 mb-2">
-        Preview your data
-      </h2>
-      <p className="text-slate-600 mb-8">
-        Here's what your dashboard will look like. Everything looks good!
-      </p>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {previewMetrics.map((metric) => (
-          <div 
-            key={metric.label}
-            className="p-4 bg-white rounded-xl border border-slate-200"
-          >
-            <p className="text-sm text-slate-500 mb-1">{metric.label}</p>
-            <p className="text-2xl font-bold text-slate-900">{metric.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-slate-50 rounded-xl p-6 mb-8">
-        <h3 className="font-semibold text-slate-900 mb-4">Sample Records</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-slate-500 border-b border-slate-200">
-                <th className="pb-2 pr-4">Name</th>
-                <th className="pb-2 pr-4">Owner</th>
-                <th className="pb-2 pr-4">Value</th>
-                <th className="pb-2 pr-4">Status</th>
-              </tr>
-            </thead>
-            <tbody className="text-slate-700">
-              <tr className="border-b border-slate-100">
-                <td className="py-2 pr-4">Acme Corp</td>
-                <td className="py-2 pr-4">John D.</td>
-                <td className="py-2 pr-4">$12,500</td>
-                <td className="py-2 pr-4">
-                  <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">
-                    Won
-                  </span>
-                </td>
-              </tr>
-              <tr className="border-b border-slate-100">
-                <td className="py-2 pr-4">TechStart Inc</td>
-                <td className="py-2 pr-4">Sarah M.</td>
-                <td className="py-2 pr-4">$8,200</td>
-                <td className="py-2 pr-4">
-                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs">
-                    In Progress
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td className="py-2 pr-4">GlobalTech</td>
-                <td className="py-2 pr-4">Mike R.</td>
-                <td className="py-2 pr-4">$45,000</td>
-                <td className="py-2 pr-4">
-                  <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs">
-                    Proposal
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back
-        </button>
-        <button
-          onClick={onNext}
-          className="flex items-center gap-2 px-6 py-3 bg-brand-500 text-white font-medium rounded-xl hover:bg-brand-600 transition-colors"
-        >
-          Launch Dashboard
-          <ArrowRight className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function LaunchStep() {
-  return (
-    <div className="animate-in text-center py-12">
-      <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-6">
-        <Check className="w-8 h-8 text-emerald-600" />
-      </div>
-      
-      <h2 className="text-2xl font-bold text-slate-900 mb-2">
-        Your dashboard is ready!
-      </h2>
-      <p className="text-slate-600 mb-8 max-w-md mx-auto">
-        We've created your analytics dashboard. Start exploring your data now.
-      </p>
-
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 px-6 py-3 bg-brand-500 text-white font-medium rounded-xl hover:bg-brand-600 transition-colors"
-        >
-          Open Dashboard
-          <ArrowRight className="w-4 h-4" />
-        </Link>
-        <Link
-          href="/settings/data"
-          className="flex items-center gap-2 px-6 py-3 bg-white text-slate-700 font-medium rounded-xl border border-slate-200 hover:border-slate-300 transition-colors"
-        >
-          Configure More
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// MAIN PAGE
-// =============================================================================
-
-export default function OnboardingPage() {
-  const [step, setStep] = useState<Step>('source');
-  const [selectedSource, setSelectedSource] = useState<string | null>(null);
-
-  const handleSourceSelect = (sourceId: string) => {
-    setSelectedSource(sourceId);
-    setStep('connect');
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-surface">
       {/* Header */}
-      <header className="bg-white border-b border-slate-100">
+      <header className="border-b border-surface-tertiary bg-surface-secondary">
         <div className="max-w-4xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-500 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 rounded-lg bg-brand-950 flex items-center justify-center">
+              <BarChart3 className="w-5 h-5 text-surface" />
             </div>
-            <span className="font-semibold text-lg">InsightBoard</span>
+            <span className="font-semibold text-lg text-text-primary">ClarLens</span>
           </Link>
           
-          <StepIndicator steps={STEPS} currentStep={step} />
+          <div className="flex items-center gap-2 text-sm text-text-secondary">
+            {step === 'upload' && <span className="text-text-primary">1. Upload</span>}
+            {step === 'map' && <span className="text-text-primary">2. Map Fields</span>}
+            {step === 'preview' && <span className="text-text-primary">3. Preview</span>}
+          </div>
         </div>
       </header>
 
       {/* Content */}
       <main className="max-w-2xl mx-auto px-6 py-12">
-        {step === 'source' && (
-          <SourceStep onSelect={handleSourceSelect} />
+        {step === 'upload' && (
+          <div className="animate-in">
+            <h2 className="text-2xl font-bold text-text-primary mb-2">
+              Upload your CSV
+            </h2>
+            <p className="text-text-secondary mb-8">
+              Drag & drop your file or click to browse. We'll detect the structure automatically.
+            </p>
+
+            {error && (
+              <div className="mb-6 p-4 bg-surface-tertiary border border-surface-tertiary rounded-lg flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-brand-950 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-text-primary">{error}</p>
+                  <p className="text-sm text-text-secondary mt-1">
+                    Make sure your CSV has headers and at least one data row.
+                  </p>
+                </div>
+                <button onClick={() => setError(null)} className="ml-auto">
+                  <X className="w-4 h-4 text-text-tertiary" />
+                </button>
+              </div>
+            )}
+
+            <div
+              ref={dropZoneRef}
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className={`
+                border-2 border-dashed rounded-lg p-12 text-center transition-colors cursor-pointer
+                ${file ? 'border-brand-950 bg-surface-tertiary' : 'border-surface-tertiary hover:border-brand-300'}
+              `}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              
+              {isLoading ? (
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="w-8 h-8 text-brand-950 animate-spin" />
+                  <p className="text-text-secondary">Processing CSV...</p>
+                </div>
+              ) : file ? (
+                <div>
+                  <FileSpreadsheet className="w-8 h-8 mx-auto mb-4 text-brand-950" />
+                  <p className="font-medium text-text-primary">{file.name}</p>
+                  <p className="text-sm text-text-secondary mt-1">
+                    {(file.size / 1024).toFixed(1)} KB • {csvData.length} rows
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <Upload className="w-8 h-8 mx-auto mb-4 text-text-tertiary" />
+                  <p className="font-medium text-text-primary mb-1">
+                    Drop your CSV here or click to browse
+                  </p>
+                  <p className="text-sm text-text-secondary">
+                    Supports CSV files with headers
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 text-center">
+              <p className="text-sm text-text-tertiary mb-2">Or try with sample data:</p>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log('Button clicked, loading sample CSV');
+                    loadSampleCSV('sample-data.csv');
+                  }}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 bg-surface-secondary text-text-secondary text-xs font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  {isLoading ? 'Loading...' : 'Sales Pipeline'}
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    loadSampleCSV('sample-sales-pipeline.csv');
+                  }}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 bg-surface-secondary text-text-secondary text-xs font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  Sales (Extended)
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    loadSampleCSV('sample-ecommerce-orders.csv');
+                  }}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 bg-surface-secondary text-text-secondary text-xs font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  E-commerce
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    loadSampleCSV('sample-leads.csv');
+                  }}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 bg-surface-secondary text-text-secondary text-xs font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary hover:text-text-primary transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  Leads
+                </button>
+              </div>
+            </div>
+          </div>
         )}
-        
-        {step === 'connect' && selectedSource && (
-          <ConnectStep 
-            sourceId={selectedSource}
-            onNext={() => setStep('map')}
-            onBack={() => setStep('source')}
-          />
-        )}
-        
+
         {step === 'map' && (
-          <MapStep 
-            onNext={() => setStep('preview')}
-            onBack={() => setStep('connect')}
-          />
+          <div className="animate-in">
+            <h2 className="text-2xl font-bold text-text-primary mb-2">
+              Map your fields
+            </h2>
+            <p className="text-text-secondary mb-6">
+              We've auto-detected your fields. Confirm the mappings below.
+            </p>
+
+            <div className="mb-6 p-4 bg-surface-secondary border border-brand-600/20 rounded-lg">
+              <p className="text-sm text-text-secondary">
+                <span className="font-medium text-text-primary">Required:</span> Stage/Status, Date (created or updated)
+                <br />
+                <span className="font-medium text-text-primary">Optional:</span> Owner, Value
+              </p>
+            </div>
+
+            <div className="border border-brand-600/20 rounded-lg overflow-hidden mb-8">
+              <div className="grid grid-cols-2 gap-4 p-4 bg-surface-secondary text-sm font-medium text-text-secondary border-b border-brand-600/20">
+                <div>Source Field</div>
+                <div>Maps To</div>
+              </div>
+              {headers.map((header) => {
+                const mapping = mappings.find(m => m.sourceField === header);
+                const targetField = mapping?.targetField || '';
+                const required = mapping?.required || false;
+                
+                return (
+                  <div key={header} className="grid grid-cols-2 gap-4 p-4 border-b border-brand-600/10 last:border-b-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-text-primary">{header}</span>
+                      {required && (
+                        <span className="text-xs text-brand-950">required</span>
+                      )}
+                    </div>
+                    <div>
+                      <select
+                        value={targetField}
+                        onChange={(e) => handleMappingChange(header, e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg bg-surface-secondary border border-surface-tertiary text-text-primary text-sm focus:border-brand-950 focus:ring-1 focus:ring-brand-950"
+                      >
+                        <option value="">Skip</option>
+                        <option value="status">Stage/Status</option>
+                        <option value="createdAt">Date (Created)</option>
+                        <option value="updatedAt">Date (Updated)</option>
+                        <option value="ownerId">Owner/Person</option>
+                        <option value="value">Value/Amount</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {!canProceed() && (
+              <div className="mb-6 p-4 bg-surface-secondary border border-brand-600/20 rounded-lg flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-brand-950 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-text-secondary">
+                  Please map at least Stage/Status and Date fields to continue.
+                </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setStep('upload')}
+                className="flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+              <button
+                onClick={handlePreview}
+                disabled={!canProceed()}
+                className="flex items-center gap-2 px-6 py-3 bg-brand-950 text-surface font-medium rounded-lg hover:bg-brand-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continue
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         )}
-        
+
         {step === 'preview' && (
-          <PreviewStep 
-            onNext={() => setStep('launch')}
-            onBack={() => setStep('map')}
-          />
-        )}
-        
-        {step === 'launch' && (
-          <LaunchStep />
+          <div className="animate-in">
+            <h2 className="text-2xl font-bold text-text-primary mb-2">
+              Preview your data
+            </h2>
+            <p className="text-text-secondary mb-8">
+              Review your data summary and sample rows before generating insights.
+            </p>
+
+            {/* Summary */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div className="p-4 bg-surface-secondary rounded-lg border border-surface-tertiary">
+                <p className="text-sm text-text-tertiary mb-1">Total Rows</p>
+                <p className="text-2xl font-bold text-text-primary">{csvData.length}</p>
+              </div>
+              <div className="p-4 bg-surface-secondary rounded-lg border border-surface-tertiary">
+                <p className="text-sm text-text-tertiary mb-1">Date Range</p>
+                <p className="text-lg font-semibold text-text-primary">
+                  {(() => {
+                    const dateField = mappings.find(m => m.targetField === 'createdAt' || m.targetField === 'updatedAt');
+                    if (!dateField) return 'N/A';
+                    const dates = csvData.map(row => row[dateField.sourceField]).filter(Boolean);
+                    if (dates.length === 0) return 'N/A';
+                    const sorted = dates.sort();
+                    return `${sorted[0]} - ${sorted[sorted.length - 1]}`;
+                  })()}
+                </p>
+              </div>
+              <div className="p-4 bg-surface-secondary rounded-lg border border-surface-tertiary">
+                <p className="text-sm text-text-tertiary mb-1">Unique Owners</p>
+                <p className="text-2xl font-bold text-text-primary">
+                  {(() => {
+                    const ownerField = mappings.find(m => m.targetField === 'ownerId');
+                    if (!ownerField) return 'N/A';
+                    const owners = new Set(csvData.map(row => row[ownerField.sourceField]).filter(Boolean));
+                    return owners.size || 'N/A';
+                  })()}
+                </p>
+              </div>
+              <div className="p-4 bg-surface-secondary rounded-lg border border-surface-tertiary">
+                <p className="text-sm text-text-tertiary mb-1">Unique Stages</p>
+                <p className="text-2xl font-bold text-text-primary">
+                  {(() => {
+                    const statusField = mappings.find(m => m.targetField === 'status');
+                    if (!statusField) return 'N/A';
+                    const stages = new Set(csvData.map(row => row[statusField.sourceField]).filter(Boolean));
+                    return stages.size || 'N/A';
+                  })()}
+                </p>
+              </div>
+            </div>
+
+            {/* Sample rows */}
+            <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6 mb-8">
+              <h3 className="font-semibold text-text-primary mb-4">Sample Records (first 20)</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-text-tertiary border-b border-brand-600/20">
+                      {headers.slice(0, 6).map(header => (
+                        <th key={header} className="pb-2 pr-4">{header}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="text-text-secondary">
+                    {csvData.slice(0, 20).map((row, idx) => (
+                      <tr key={idx} className="border-b border-brand-600/10">
+                        {headers.slice(0, 6).map(header => (
+                          <td key={header} className="py-2 pr-4">{row[header] || '-'}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <button
+                onClick={() => setStep('map')}
+                className="flex items-center gap-2 px-4 py-2 text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+              <button
+                onClick={handleLaunch}
+                className="flex items-center gap-2 px-6 py-3 bg-brand-950 text-surface font-medium rounded-lg hover:bg-brand-900 transition-colors"
+              >
+                Generate Dashboard
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         )}
       </main>
     </div>
   );
 }
 
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 text-brand-950 animate-spin mx-auto mb-4" />
+          <p className="text-text-secondary">Loading...</p>
+        </div>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
+  );
+}

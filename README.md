@@ -1,15 +1,15 @@
-# InsightBoard
+# ClarLens
 
-**Plug-and-play analytics SaaS for SMEs**
+**CSV to insights in 5 minutes**
 
-Connect your data from any source. Get beautiful dashboards instantly. No consulting, no code.
+Upload your CSV and get instant insights. No setup, no code, just clarity.
 
 ## Quick Start
 
 ```bash
 npm install
 npm run dev
-# Open http://localhost:3000
+# Open http://localhost:3001
 ```
 
 ## Project Structure
