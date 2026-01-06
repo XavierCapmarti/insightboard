@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/resend';
 
+// Mark as dynamic since we use searchParams
+export const dynamic = 'force-dynamic';
+
 /**
  * Test email endpoint
  * GET /api/test-email?to=your@email.com
