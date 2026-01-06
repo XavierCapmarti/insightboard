@@ -1,0 +1,170 @@
+{
+  "id": "performance-by-owner",
+  "name": "Performance by Owner",
+  "description": "Compare individual and team performance metrics",
+  "template": "performance_by_owner",
+  "layout": {
+    "columns": 12,
+    "rowHeight": 80,
+    "gap": 16,
+    "responsive": {
+      "mobile": 1,
+      "tablet": 6,
+      "desktop": 12
+    }
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "title": "Team Summary",
+      "widgets": [
+        {
+          "id": "total-owners",
+          "type": "kpi_card",
+          "title": "Active Team Members",
+          "position": { "x": 0, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "active_owners",
+            "showComparison": false,
+            "icon": "users",
+            "color": "#3B82F6"
+          }
+        },
+        {
+          "id": "avg-per-owner",
+          "type": "kpi_card",
+          "title": "Avg Records/Owner",
+          "position": { "x": 3, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "avg_records_per_owner",
+            "showComparison": true,
+            "icon": "bar-chart-2",
+            "color": "#10B981"
+          }
+        },
+        {
+          "id": "top-performer",
+          "type": "kpi_card",
+          "title": "Top Performer",
+          "position": { "x": 6, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "top_performer",
+            "showComparison": false,
+            "icon": "award",
+            "color": "#F59E0B"
+          }
+        },
+        {
+          "id": "team-velocity",
+          "type": "kpi_card",
+          "title": "Team Velocity",
+          "position": { "x": 9, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "team_velocity",
+            "showComparison": true,
+            "icon": "zap",
+            "color": "#8B5CF6"
+          }
+        }
+      ]
+    },
+    {
+      "id": "leaderboard",
+      "title": "Leaderboard",
+      "widgets": [
+        {
+          "id": "owner-leaderboard",
+          "type": "leaderboard",
+          "title": "Top Performers",
+          "position": { "x": 0, "y": 2, "width": 6, "height": 5 },
+          "config": {
+            "type": "leaderboard",
+            "metricId": "owner_value",
+            "groupBy": "ownerId",
+            "limit": 10,
+            "showRank": true,
+            "showProgress": true,
+            "sortDirection": "desc"
+          }
+        },
+        {
+          "id": "owner-comparison",
+          "type": "bar_chart",
+          "title": "Value by Owner",
+          "position": { "x": 6, "y": 2, "width": 6, "height": 5 },
+          "config": {
+            "type": "bar_chart",
+            "metrics": [
+              { "metricId": "owner_value", "label": "Value", "color": "#3B82F6" }
+            ],
+            "showValues": true,
+            "showGrid": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "details",
+      "title": "Detailed Performance",
+      "widgets": [
+        {
+          "id": "performance-table",
+          "type": "table",
+          "title": "Full Performance Table",
+          "position": { "x": 0, "y": 7, "width": 12, "height": 5 },
+          "config": {
+            "type": "table",
+            "columns": [
+              { "field": "rank", "label": "#", "width": 50, "align": "center" },
+              { "field": "owner", "label": "Owner", "sortable": true },
+              { "field": "records", "label": "Records", "align": "right", "sortable": true },
+              { "field": "value", "label": "Total Value", "align": "right", "format": "currency", "sortable": true },
+              { "field": "avgValue", "label": "Avg Value", "align": "right", "format": "currency", "sortable": true },
+              { "field": "closeRate", "label": "Close Rate", "align": "right", "format": "percentage", "sortable": true },
+              { "field": "avgCycleTime", "label": "Avg Cycle", "align": "right", "format": "duration", "sortable": true }
+            ],
+            "pageSize": 15,
+            "sortable": true,
+            "searchable": true,
+            "exportable": true
+          }
+        }
+      ]
+    }
+  ],
+  "filters": [
+    {
+      "id": "period",
+      "field": "createdAt",
+      "label": "Period",
+      "type": "date_range"
+    },
+    {
+      "id": "team",
+      "field": "team",
+      "label": "Team",
+      "type": "multi_select"
+    },
+    {
+      "id": "status",
+      "field": "status",
+      "label": "Status",
+      "type": "multi_select"
+    }
+  ],
+  "theme": {
+    "mode": "light",
+    "primaryColor": "#8B5CF6",
+    "accentColor": "#F59E0B",
+    "backgroundColor": "#F8FAFC",
+    "cardBackground": "#FFFFFF",
+    "textColor": "#1E293B",
+    "borderColor": "#E2E8F0",
+    "borderRadius": 12
+  }
+}
+

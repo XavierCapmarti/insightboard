@@ -1,0 +1,430 @@
+{
+  "project": {
+    "name": "insightboard",
+    "version": "0.1.0",
+    "description": "Plug-and-play analytics SaaS for SMEs - connect any data source, get beautiful dashboards instantly",
+    "framework": "Next.js 14 (App Router)",
+    "language": "TypeScript",
+    "styling": "Tailwind CSS",
+    "charts": "Recharts"
+  },
+  "architecture": {
+    "dataAdapterLayer": {
+      "description": "Pluggable adapters for ingesting data from various sources",
+      "interface": {
+        "ingest": "Fetch raw data from source",
+        "normalise": "Transform raw data to core entities using field mappings",
+        "validate": "Check data quality and completeness",
+        "preview": "Sample normalised records before full import",
+        "detectSchema": "Auto-detect field types for mapping suggestions"
+      },
+      "adapters": [
+        {
+          "id": "csv_upload",
+          "name": "CSV Upload",
+          "file": "src/adapters/csv.ts",
+          "supportedFormats": [".csv", ".tsv", ".txt"],
+          "status": "implemented"
+        },
+        {
+          "id": "google_sheets",
+          "name": "Google Sheets",
+          "file": "src/adapters/google-sheets.ts",
+          "supportedFormats": ["spreadsheet"],
+          "status": "scaffold_only",
+          "notes": "Requires OAuth setup"
+        },
+        {
+          "id": "generic_crm",
+          "name": "Generic CRM API",
+          "file": "src/adapters/generic-crm.ts",
+          "supportedFormats": ["rest_api", "json"],
+          "status": "implemented"
+        }
+      ],
+      "registry": "src/adapters/index.ts"
+    },
+    "coreModels": {
+      "description": "Generic, industry-agnostic data entities",
+      "file": "src/types/core.ts",
+      "entities": {
+        "Record": {
+          "description": "Any tracked entity (deal, order, ticket, project)",
+          "fields": {
+            "id": "string",
+            "externalId": "string (optional)",
+            "ownerId": "string",
+            "value": "number (optional)",
+            "status": "string",
+            "metadata": "RecordMetadata",
+            "createdAt": "Date",
+            "updatedAt": "Date",
+            "closedAt": "Date (optional)"
+          }
+        },
+        "StageEvent": {
+          "description": "Stage transition for funnel/pipeline tracking",
+          "fields": {
+            "id": "string",
+            "recordId": "string",
+            "fromStage": "string | null",
+            "toStage": "string",
+            "timestamp": "Date",
+            "actorId": "string (optional)",
+            "durationInPreviousStage": "number (optional, ms)"
+          }
+        },
+        "Actor": {
+          "description": "User, team member, or owner",
+          "fields": {
+            "id": "string",
+            "externalId": "string (optional)",
+            "name": "string",
+            "email": "string (optional)",
+            "role": "string (optional)",
+            "team": "string (optional)",
+            "metadata": "Record<string, unknown>",
+            "createdAt": "Date"
+          }
+        },
+        "Category": {
+          "description": "Grouping/segmentation entity",
+          "fields": {
+            "id": "string",
+            "name": "string",
+            "description": "string (optional)",
+            "parentId": "string (optional)",
+            "metadata": "Record<string, unknown>"
+          }
+        }
+      }
+    },
+    "metricsEngine": {
+      "description": "Computes metrics from normalised data",
+      "file": "src/engine/metrics.ts",
+      "aggregationTypes": [
+        "count",
+        "sum",
+        "average",
+        "min",
+        "max",
+        "median",
+        "percentile",
+        "conversion_rate",
+        "cycle_time"
+      ],
+      "periodTypes": [
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "year",
+        "custom"
+      ],
+      "features": [
+        "Period-aware computation",
+        "Previous period comparison",
+        "Grouping/breakdown by field",
+        "Filtering support",
+        "Multiple output formats (currency, percentage, duration)"
+      ]
+    },
+    "funnelEngine": {
+      "description": "Pipeline/funnel analysis",
+      "file": "src/engine/funnel.ts",
+      "features": [
+        "Stage-by-stage metrics",
+        "Conversion rates between stages",
+        "Drop-off analysis",
+        "Average time per stage",
+        "Stage transition tracking",
+        "Overall cycle time"
+      ]
+    },
+    "dashboardTemplates": {
+      "description": "JSON-configurable dashboard layouts",
+      "directory": "src/templates/",
+      "templates": [
+        {
+          "id": "revenue-overview",
+          "name": "Revenue Overview",
+          "file": "revenue-overview.json",
+          "description": "Track revenue, growth trends, and performance by segment",
+          "widgets": ["kpi_card", "line_chart", "pie_chart", "table"]
+        },
+        {
+          "id": "funnel-analysis",
+          "name": "Funnel Analysis",
+          "file": "funnel-analysis.json",
+          "description": "Visualize pipeline stages, conversion rates, and bottlenecks",
+          "widgets": ["kpi_card", "funnel_chart", "bar_chart", "table"]
+        },
+        {
+          "id": "performance-by-owner",
+          "name": "Performance by Owner",
+          "file": "performance-by-owner.json",
+          "description": "Compare individual and team performance metrics",
+          "widgets": ["kpi_card", "leaderboard", "bar_chart", "table"]
+        },
+        {
+          "id": "time-to-close",
+          "name": "Time to Close",
+          "file": "time-to-close.json",
+          "description": "Analyze cycle times, velocity trends, and bottlenecks",
+          "widgets": ["kpi_card", "line_chart", "bar_chart", "table"]
+        }
+      ],
+      "widgetTypes": [
+        "kpi_card",
+        "line_chart",
+        "bar_chart",
+        "pie_chart",
+        "funnel_chart",
+        "table",
+        "leaderboard",
+        "trend_spark",
+        "progress_bar",
+        "heatmap",
+        "gauge",
+        "text",
+        "filter"
+      ]
+    }
+  },
+  "pages": {
+    "landing": {
+      "route": "/",
+      "file": "src/app/page.tsx",
+      "description": "Marketing landing page",
+      "sections": [
+        "Hero with CTA",
+        "Features grid",
+        "Template showcase",
+        "CTA banner",
+        "Footer"
+      ]
+    },
+    "onboarding": {
+      "route": "/onboarding",
+      "file": "src/app/onboarding/page.tsx",
+      "description": "5-step self-serve onboarding wizard",
+      "steps": [
+        {
+          "id": "source",
+          "name": "Data Source",
+          "description": "Choose data source type (CSV, Sheets, API)"
+        },
+        {
+          "id": "connect",
+          "name": "Connect",
+          "description": "Upload file or enter connection details"
+        },
+        {
+          "id": "map",
+          "name": "Map Fields",
+          "description": "Map source fields to core schema with auto-suggestions"
+        },
+        {
+          "id": "preview",
+          "name": "Preview",
+          "description": "Review normalised data and metrics"
+        },
+        {
+          "id": "launch",
+          "name": "Launch",
+          "description": "Dashboard ready confirmation"
+        }
+      ]
+    },
+    "dashboard": {
+      "route": "/dashboard",
+      "file": "src/app/dashboard/page.tsx",
+      "description": "Main dashboard view",
+      "components": [
+        "Sidebar navigation",
+        "KPI cards",
+        "Funnel chart",
+        "Leaderboard",
+        "Period selector",
+        "Refresh button"
+      ]
+    }
+  },
+  "apiEndpoints": {
+    "/api/ingest": {
+      "method": "POST",
+      "file": "src/app/api/ingest/route.ts",
+      "description": "Handle data uploads and source connections",
+      "request": {
+        "sourceType": "string",
+        "config": "DataSourceConfig",
+        "content": "string (optional, for CSV)"
+      },
+      "response": {
+        "success": "boolean",
+        "rowCount": "number",
+        "schema": "DetectedSchema",
+        "warnings": "string[]"
+      }
+    },
+    "/api/metrics": {
+      "method": "GET",
+      "file": "src/app/api/metrics/route.ts",
+      "description": "Compute metrics from stored data",
+      "parameters": {
+        "period": "PeriodType (day, week, month, etc.)",
+        "metrics": "string (comma-separated metric IDs)"
+      },
+      "response": {
+        "period": "{ current, previous }",
+        "metrics": "MetricValue[]"
+      }
+    },
+    "/api/templates": {
+      "method": "GET",
+      "file": "src/app/api/templates/route.ts",
+      "description": "Fetch available dashboard templates",
+      "response": {
+        "templates": "Array<{ id, name, description, requiredMetrics }>"
+      }
+    }
+  },
+  "types": {
+    "core": "src/types/core.ts",
+    "adapters": "src/types/adapters.ts",
+    "dashboard": "src/types/dashboard.ts",
+    "index": "src/types/index.ts"
+  },
+  "utilities": {
+    "file": "src/lib/utils.ts",
+    "functions": [
+      "cn - Tailwind class merge",
+      "formatCurrency",
+      "formatNumber",
+      "formatPercent",
+      "formatDuration",
+      "generateId",
+      "debounce",
+      "throttle",
+      "sleep",
+      "safeJsonParse",
+      "groupBy",
+      "getChartColor"
+    ]
+  },
+  "dependencies": {
+    "core": [
+      "next@^14.2.0",
+      "react@^18.3.1",
+      "react-dom@^18.3.1",
+      "typescript@^5"
+    ],
+    "ui": [
+      "tailwindcss@^3.4.0",
+      "lucide-react@^0.400.0",
+      "clsx@^2.1.1",
+      "tailwind-merge@^2.3.0"
+    ],
+    "charts": [
+      "recharts@^2.12.0"
+    ],
+    "utilities": [
+      "date-fns@^3.6.0",
+      "zod@^3.23.0",
+      "uuid@^9.0.1"
+    ]
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "test": "jest"
+  },
+  "directories": {
+    "src/adapters": "Data source adapters",
+    "src/app": "Next.js App Router pages and API routes",
+    "src/engine": "Metrics and funnel computation",
+    "src/lib": "Utility functions",
+    "src/templates": "Dashboard template JSON configs",
+    "src/types": "TypeScript interfaces"
+  },
+  "extensibility": {
+    "addNewAdapter": {
+      "steps": [
+        "Create class extending BaseAdapter in src/adapters/",
+        "Implement getRows(), getFieldNames(), detectFields()",
+        "Register in src/adapters/index.ts"
+      ]
+    },
+    "addNewMetricType": {
+      "steps": [
+        "Add to AggregationType union in src/types/core.ts",
+        "Implement in MetricsEngine.aggregate() in src/engine/metrics.ts",
+        "Add formatting if needed"
+      ]
+    },
+    "addNewWidgetType": {
+      "steps": [
+        "Define config type in src/types/dashboard.ts",
+        "Create component in src/components/widgets/",
+        "Register in widget renderer"
+      ]
+    },
+    "createCustomTemplate": {
+      "steps": [
+        "Create JSON file in src/templates/",
+        "Define sections, widgets, filters",
+        "Register in src/templates/index.ts"
+      ]
+    }
+  },
+  "roadmap": [
+    "Real Google Sheets OAuth integration",
+    "Stripe adapter",
+    "Airtable adapter",
+    "Notion adapter",
+    "Dashboard sharing & embedding",
+    "Scheduled email reports",
+    "Team/workspace management",
+    "Custom metric builder UI",
+    "Alert/notification rules",
+    "White-label customization"
+  ],
+  "design": {
+    "colors": {
+      "brand": "#0ea5e9 (sky-500)",
+      "accent": "#10B981 (emerald-500)",
+      "background": "#F8FAFC (slate-50)",
+      "surface": "#FFFFFF",
+      "text": "#1E293B (slate-800)"
+    },
+    "fonts": {
+      "primary": "Inter"
+    },
+    "borderRadius": "12px (rounded-xl)"
+  },
+  "status": {
+    "phase": "scaffold",
+    "completedModules": [
+      "Project structure",
+      "TypeScript interfaces",
+      "Data adapters (CSV, Sheets, CRM)",
+      "Metrics engine",
+      "Funnel engine",
+      "Dashboard templates (JSON)",
+      "Landing page",
+      "Onboarding wizard",
+      "Dashboard view",
+      "API routes"
+    ],
+    "nextSteps": [
+      "Wire up real data flow end-to-end",
+      "Implement widget rendering from JSON config",
+      "Add authentication",
+      "Connect to database for persistence"
+    ]
+  },
+  "createdAt": "2025-01-01"
+}
+

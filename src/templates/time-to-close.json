@@ -1,0 +1,180 @@
+{
+  "id": "time-to-close",
+  "name": "Time to Close",
+  "description": "Analyze cycle times, velocity trends, and bottlenecks",
+  "template": "time_to_close",
+  "layout": {
+    "columns": 12,
+    "rowHeight": 80,
+    "gap": 16,
+    "responsive": {
+      "mobile": 1,
+      "tablet": 6,
+      "desktop": 12
+    }
+  },
+  "sections": [
+    {
+      "id": "timing-kpis",
+      "title": "Timing Metrics",
+      "widgets": [
+        {
+          "id": "avg-cycle-time",
+          "type": "kpi_card",
+          "title": "Avg Cycle Time",
+          "position": { "x": 0, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "avg_cycle_time",
+            "showComparison": true,
+            "icon": "clock",
+            "color": "#3B82F6"
+          }
+        },
+        {
+          "id": "median-cycle-time",
+          "type": "kpi_card",
+          "title": "Median Cycle Time",
+          "position": { "x": 3, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "median_cycle_time",
+            "showComparison": true,
+            "icon": "activity",
+            "color": "#10B981"
+          }
+        },
+        {
+          "id": "fastest-close",
+          "type": "kpi_card",
+          "title": "Fastest Close",
+          "position": { "x": 6, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "fastest_close",
+            "showComparison": false,
+            "icon": "zap",
+            "color": "#F59E0B"
+          }
+        },
+        {
+          "id": "slowest-stage",
+          "type": "kpi_card",
+          "title": "Slowest Stage",
+          "position": { "x": 9, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "slowest_stage",
+            "showComparison": false,
+            "icon": "alert-circle",
+            "color": "#EF4444"
+          }
+        }
+      ]
+    },
+    {
+      "id": "trends",
+      "title": "Cycle Time Trends",
+      "widgets": [
+        {
+          "id": "cycle-trend",
+          "type": "line_chart",
+          "title": "Cycle Time Over Time",
+          "position": { "x": 0, "y": 2, "width": 8, "height": 4 },
+          "config": {
+            "type": "line_chart",
+            "metrics": [
+              { "metricId": "avg_cycle_time", "label": "Average", "color": "#3B82F6" },
+              { "metricId": "median_cycle_time", "label": "Median", "color": "#10B981" }
+            ],
+            "xAxis": { "field": "period", "label": "Period" },
+            "yAxis": { "label": "Days", "format": "number" },
+            "legend": { "show": true, "position": "top" },
+            "showGrid": true
+          }
+        },
+        {
+          "id": "cycle-distribution",
+          "type": "bar_chart",
+          "title": "Cycle Time Distribution",
+          "position": { "x": 8, "y": 2, "width": 4, "height": 4 },
+          "config": {
+            "type": "bar_chart",
+            "metrics": [
+              { "metricId": "cycle_distribution", "label": "Count", "color": "#8B5CF6" }
+            ],
+            "showValues": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "stage-timing",
+      "title": "Stage Timing",
+      "widgets": [
+        {
+          "id": "time-per-stage",
+          "type": "bar_chart",
+          "title": "Average Time per Stage",
+          "position": { "x": 0, "y": 6, "width": 6, "height": 4 },
+          "config": {
+            "type": "bar_chart",
+            "metrics": [
+              { "metricId": "avg_time_per_stage", "label": "Days", "color": "#3B82F6" }
+            ],
+            "showValues": true,
+            "showGrid": true
+          }
+        },
+        {
+          "id": "stage-timing-table",
+          "type": "table",
+          "title": "Stage Timing Details",
+          "position": { "x": 6, "y": 6, "width": 6, "height": 4 },
+          "config": {
+            "type": "table",
+            "columns": [
+              { "field": "stage", "label": "Stage", "sortable": true },
+              { "field": "avgTime", "label": "Avg Time", "align": "right", "format": "duration", "sortable": true },
+              { "field": "minTime", "label": "Min", "align": "right", "format": "duration", "sortable": true },
+              { "field": "maxTime", "label": "Max", "align": "right", "format": "duration", "sortable": true }
+            ],
+            "pageSize": 10,
+            "sortable": true
+          }
+        }
+      ]
+    }
+  ],
+  "filters": [
+    {
+      "id": "period",
+      "field": "closedAt",
+      "label": "Closed Period",
+      "type": "date_range"
+    },
+    {
+      "id": "owner",
+      "field": "ownerId",
+      "label": "Owner",
+      "type": "multi_select"
+    },
+    {
+      "id": "segment",
+      "field": "segment",
+      "label": "Segment",
+      "type": "multi_select"
+    }
+  ],
+  "theme": {
+    "mode": "light",
+    "primaryColor": "#3B82F6",
+    "accentColor": "#8B5CF6",
+    "backgroundColor": "#F8FAFC",
+    "cardBackground": "#FFFFFF",
+    "textColor": "#1E293B",
+    "borderColor": "#E2E8F0",
+    "borderRadius": 12
+  }
+}
+

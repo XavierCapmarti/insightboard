@@ -1,0 +1,159 @@
+{
+  "id": "funnel-analysis",
+  "name": "Funnel Analysis",
+  "description": "Visualize pipeline stages, conversion rates, and bottlenecks",
+  "template": "funnel_analysis",
+  "layout": {
+    "columns": 12,
+    "rowHeight": 80,
+    "gap": 16,
+    "responsive": {
+      "mobile": 1,
+      "tablet": 6,
+      "desktop": 12
+    }
+  },
+  "sections": [
+    {
+      "id": "funnel-overview",
+      "title": "Pipeline Overview",
+      "widgets": [
+        {
+          "id": "total-pipeline",
+          "type": "kpi_card",
+          "title": "Total in Pipeline",
+          "position": { "x": 0, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "total_pipeline",
+            "showComparison": true,
+            "icon": "layers",
+            "color": "#3B82F6"
+          }
+        },
+        {
+          "id": "conversion-rate",
+          "type": "kpi_card",
+          "title": "Overall Conversion",
+          "position": { "x": 3, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "overall_conversion",
+            "showComparison": true,
+            "icon": "trending-up",
+            "color": "#10B981"
+          }
+        },
+        {
+          "id": "avg-cycle-time",
+          "type": "kpi_card",
+          "title": "Avg Cycle Time",
+          "position": { "x": 6, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "avg_cycle_time",
+            "showComparison": true,
+            "icon": "clock",
+            "color": "#8B5CF6"
+          }
+        },
+        {
+          "id": "biggest-dropoff",
+          "type": "kpi_card",
+          "title": "Biggest Drop-off",
+          "position": { "x": 9, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "biggest_dropoff",
+            "showComparison": false,
+            "icon": "alert-triangle",
+            "color": "#EF4444"
+          }
+        }
+      ]
+    },
+    {
+      "id": "funnel-viz",
+      "title": "Funnel Visualization",
+      "widgets": [
+        {
+          "id": "main-funnel",
+          "type": "funnel_chart",
+          "title": "Pipeline Funnel",
+          "position": { "x": 0, "y": 2, "width": 8, "height": 5 },
+          "config": {
+            "type": "funnel_chart",
+            "metrics": [
+              { "metricId": "funnel_stages", "label": "Count" }
+            ],
+            "showValues": true,
+            "colors": ["#3B82F6", "#60A5FA", "#93C5FD", "#BFDBFE", "#DBEAFE"]
+          }
+        },
+        {
+          "id": "stage-conversion",
+          "type": "bar_chart",
+          "title": "Stage Conversion Rates",
+          "position": { "x": 8, "y": 2, "width": 4, "height": 5 },
+          "config": {
+            "type": "bar_chart",
+            "metrics": [
+              { "metricId": "stage_conversions", "label": "Conversion %", "color": "#10B981" }
+            ],
+            "showValues": true,
+            "showGrid": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "stage-details",
+      "title": "Stage Details",
+      "widgets": [
+        {
+          "id": "stage-table",
+          "type": "table",
+          "title": "Stage Metrics",
+          "position": { "x": 0, "y": 7, "width": 12, "height": 4 },
+          "config": {
+            "type": "table",
+            "columns": [
+              { "field": "stage", "label": "Stage", "sortable": true },
+              { "field": "count", "label": "Count", "align": "right", "sortable": true },
+              { "field": "avgTime", "label": "Avg Time in Stage", "align": "right", "format": "duration", "sortable": true },
+              { "field": "conversionRate", "label": "Conversion to Next", "align": "right", "format": "percentage", "sortable": true },
+              { "field": "dropoffRate", "label": "Drop-off Rate", "align": "right", "format": "percentage", "sortable": true }
+            ],
+            "pageSize": 10,
+            "sortable": true
+          }
+        }
+      ]
+    }
+  ],
+  "filters": [
+    {
+      "id": "period",
+      "field": "createdAt",
+      "label": "Period",
+      "type": "date_range"
+    },
+    {
+      "id": "owner",
+      "field": "ownerId",
+      "label": "Owner",
+      "type": "multi_select"
+    }
+  ],
+  "theme": {
+    "mode": "light",
+    "primaryColor": "#3B82F6",
+    "accentColor": "#10B981",
+    "backgroundColor": "#F8FAFC",
+    "cardBackground": "#FFFFFF",
+    "textColor": "#1E293B",
+    "borderColor": "#E2E8F0",
+    "borderRadius": 12
+  }
+}
+

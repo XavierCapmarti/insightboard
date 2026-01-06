@@ -1,0 +1,176 @@
+{
+  "id": "revenue-overview",
+  "name": "Revenue Overview",
+  "description": "Track revenue, growth trends, and performance by segment",
+  "template": "revenue_overview",
+  "layout": {
+    "columns": 12,
+    "rowHeight": 80,
+    "gap": 16,
+    "responsive": {
+      "mobile": 1,
+      "tablet": 6,
+      "desktop": 12
+    }
+  },
+  "sections": [
+    {
+      "id": "kpis",
+      "title": "Key Metrics",
+      "widgets": [
+        {
+          "id": "total-revenue",
+          "type": "kpi_card",
+          "title": "Total Revenue",
+          "position": { "x": 0, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "total_revenue",
+            "showComparison": true,
+            "comparisonPeriod": "previous",
+            "icon": "dollar-sign",
+            "color": "#10B981"
+          }
+        },
+        {
+          "id": "record-count",
+          "type": "kpi_card",
+          "title": "Total Records",
+          "position": { "x": 3, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "record_count",
+            "showComparison": true,
+            "comparisonPeriod": "previous",
+            "icon": "file-text",
+            "color": "#3B82F6"
+          }
+        },
+        {
+          "id": "avg-value",
+          "type": "kpi_card",
+          "title": "Average Value",
+          "position": { "x": 6, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "average_value",
+            "showComparison": true,
+            "comparisonPeriod": "previous",
+            "icon": "trending-up",
+            "color": "#8B5CF6"
+          }
+        },
+        {
+          "id": "close-rate",
+          "type": "kpi_card",
+          "title": "Close Rate",
+          "position": { "x": 9, "y": 0, "width": 3, "height": 2 },
+          "config": {
+            "type": "kpi_card",
+            "metricId": "close_rate",
+            "showComparison": true,
+            "comparisonPeriod": "previous",
+            "icon": "target",
+            "color": "#F59E0B"
+          }
+        }
+      ]
+    },
+    {
+      "id": "trends",
+      "title": "Revenue Trends",
+      "widgets": [
+        {
+          "id": "revenue-trend",
+          "type": "line_chart",
+          "title": "Revenue Over Time",
+          "position": { "x": 0, "y": 2, "width": 8, "height": 4 },
+          "config": {
+            "type": "line_chart",
+            "metrics": [
+              { "metricId": "total_revenue", "label": "Revenue", "color": "#10B981" }
+            ],
+            "xAxis": { "field": "period", "label": "Period" },
+            "yAxis": { "label": "Revenue", "format": "currency" },
+            "legend": { "show": false, "position": "top" },
+            "showGrid": true
+          }
+        },
+        {
+          "id": "revenue-by-segment",
+          "type": "pie_chart",
+          "title": "Revenue by Segment",
+          "position": { "x": 8, "y": 2, "width": 4, "height": 4 },
+          "config": {
+            "type": "pie_chart",
+            "metrics": [
+              { "metricId": "revenue_by_segment", "label": "Segment" }
+            ],
+            "showValues": true,
+            "colors": ["#10B981", "#3B82F6", "#8B5CF6", "#F59E0B", "#EF4444"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "performance",
+      "title": "Performance Breakdown",
+      "widgets": [
+        {
+          "id": "owner-performance",
+          "type": "table",
+          "title": "Performance by Owner",
+          "position": { "x": 0, "y": 6, "width": 12, "height": 4 },
+          "config": {
+            "type": "table",
+            "columns": [
+              { "field": "owner", "label": "Owner", "sortable": true },
+              { "field": "count", "label": "Records", "align": "right", "sortable": true },
+              { "field": "revenue", "label": "Revenue", "align": "right", "format": "currency", "sortable": true },
+              { "field": "avgValue", "label": "Avg Value", "align": "right", "format": "currency", "sortable": true },
+              { "field": "closeRate", "label": "Close Rate", "align": "right", "format": "percentage", "sortable": true }
+            ],
+            "pageSize": 10,
+            "sortable": true,
+            "searchable": true,
+            "exportable": true
+          }
+        }
+      ]
+    }
+  ],
+  "filters": [
+    {
+      "id": "period",
+      "field": "createdAt",
+      "label": "Period",
+      "type": "date_range",
+      "required": false
+    },
+    {
+      "id": "owner",
+      "field": "ownerId",
+      "label": "Owner",
+      "type": "multi_select",
+      "required": false
+    },
+    {
+      "id": "status",
+      "field": "status",
+      "label": "Status",
+      "type": "multi_select",
+      "required": false
+    }
+  ],
+  "theme": {
+    "mode": "light",
+    "primaryColor": "#10B981",
+    "accentColor": "#3B82F6",
+    "backgroundColor": "#F8FAFC",
+    "cardBackground": "#FFFFFF",
+    "textColor": "#1E293B",
+    "borderColor": "#E2E8F0",
+    "borderRadius": 12
+  }
+}
+
