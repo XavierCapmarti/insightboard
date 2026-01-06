@@ -8,7 +8,7 @@ Personal side project: Plug-and-play analytics SaaS for SMEs.
 
 | Field | Value |
 |-------|-------|
-| Repo | `github.com/xcapmarti/insightboard` (TBD) |
+| Repo | [github.com/XavierCapmarti/solitude](https://github.com/XavierCapmarti/solitude) |
 | Vercel | (not yet deployed) |
 | Domain | (TBD) |
 | Tech | Next.js 14, TypeScript, Tailwind, Recharts |
