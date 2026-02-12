@@ -18,6 +18,8 @@ import { DealQualityChart } from '@/components/charts/DealQualityChart';
 import { StageDurationChart } from '@/components/charts/StageDurationChart';
 import { DashboardFilters } from '@/components/filters/DashboardFilters';
 import { FilterState, applyFilters } from '@/lib/filters';
+import { hasFeature } from '@/lib/tier';
+import UpgradePrompt from '@/components/UpgradePrompt';
 
 interface CSVRow {
   [key: string]: string;
@@ -277,12 +279,18 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         {/* Filters */}
-        <DashboardFilters
-          csvData={csvData}
-          mappings={mappings}
-          filters={filters}
-          onFiltersChange={setFilters}
-        />
+        {hasFeature('date_filter') ? (
+          <DashboardFilters
+            csvData={csvData}
+            mappings={mappings}
+            filters={filters}
+            onFiltersChange={setFilters}
+          />
+        ) : (
+          <div className="mb-8">
+            <UpgradePrompt feature="Advanced Filters" />
+          </div>
+        )}
         
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -372,33 +380,47 @@ export default function DashboardPage() {
         </div>
 
         {/* Time Series Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <TimeSeriesChart 
-            csvData={filteredData} 
-            mappings={mappings} 
-            type="velocity" 
-          />
-          <TimeSeriesChart 
-            csvData={filteredData} 
-            mappings={mappings} 
-            type="winRate" 
-          />
-        </div>
-        <div className="mb-8">
-          <TimeSeriesChart 
-            csvData={filteredData} 
-            mappings={mappings} 
-            type="distribution" 
-          />
-        </div>
+        {hasFeature('time_series') ? (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+              <TimeSeriesChart
+                csvData={filteredData}
+                mappings={mappings}
+                type="velocity"
+              />
+              <TimeSeriesChart
+                csvData={filteredData}
+                mappings={mappings}
+                type="winRate"
+              />
+            </div>
+            <div className="mb-8">
+              <TimeSeriesChart
+                csvData={filteredData}
+                mappings={mappings}
+                type="distribution"
+              />
+            </div>
+          </>
+        ) : (
+          <div className="mb-8">
+            <UpgradePrompt feature="Time Series Charts" />
+          </div>
+        )}
 
         {/* Stage Duration Predictions */}
-        <div className="mb-8">
-          <StageDurationChart 
-            csvData={filteredData} 
-            mappings={mappings} 
-          />
-        </div>
+        {hasFeature('cycle_time') ? (
+          <div className="mb-8">
+            <StageDurationChart
+              csvData={filteredData}
+              mappings={mappings}
+            />
+          </div>
+        ) : (
+          <div className="mb-8">
+            <UpgradePrompt feature="Cycle Time Breakdown" />
+          </div>
+        )}
 
         {/* Stage Details Table */}
         <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6">
@@ -434,22 +456,30 @@ export default function DashboardPage() {
         {/* Rep Performance */}
         {filteredData.length > 0 && mappings.some(m => m.targetField === 'ownerId') && (
           <div className="mb-8">
-            <RepLeaderboard 
-              csvData={filteredData} 
-              mappings={mappings} 
-              sortBy="closedWon"
-              limit={10}
-            />
+            {hasFeature('rep_leaderboard') ? (
+              <RepLeaderboard
+                csvData={filteredData}
+                mappings={mappings}
+                sortBy="closedWon"
+                limit={10}
+              />
+            ) : (
+              <UpgradePrompt feature="Rep Performance Leaderboard" />
+            )}
           </div>
         )}
 
         {/* Deal Quality Metrics */}
         {filteredData.length > 0 && mappings.some(m => m.targetField === 'value') && (
           <div className="mb-8">
-            <DealQualityChart 
-              csvData={filteredData} 
-              mappings={mappings} 
-            />
+            {hasFeature('deal_quality') ? (
+              <DealQualityChart
+                csvData={filteredData}
+                mappings={mappings}
+              />
+            ) : (
+              <UpgradePrompt feature="Deal Quality Analysis" />
+            )}
           </div>
         )}
       </main>
