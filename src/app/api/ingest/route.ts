@@ -10,7 +10,15 @@ import { DataSourceConfig } from '@/types/core';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Request body must be valid JSON' },
+        { status: 400 }
+      );
+    }
     const { sourceType, config, content } = body as {
       sourceType: string;
       config: Partial<DataSourceConfig>;
