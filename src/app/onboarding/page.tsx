@@ -232,7 +232,7 @@ function OnboardingContent() {
               Upload your CSV
             </h2>
             <p className="text-text-secondary mb-8">
-              Drag & drop your file or click to browse. We'll detect the structure automatically.
+              Drag &amp; drop your file or click to browse. We&apos;ll detect the structure automatically.
             </p>
 
             {error && (
@@ -353,7 +353,7 @@ function OnboardingContent() {
               Map your fields
             </h2>
             <p className="text-text-secondary mb-6">
-              We've auto-detected your fields. Confirm the mappings below.
+              We&apos;ve auto-detected your fields. Confirm the mappings below.
             </p>
 
             <div className="mb-6 p-4 bg-surface-secondary border border-brand-600/20 rounded-lg">

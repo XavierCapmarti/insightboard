@@ -48,35 +48,19 @@ export function TimeSeriesChart({ csvData, mappings, type }: TimeSeriesChartProp
     }
   }, [csvData, mappings, type]);
 
-  if (chartData.length === 0) {
-    return (
-      <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <TrendingUp className="w-5 h-5 text-brand-950" />
-          <h3 className="font-semibold text-text-primary">
-            {type === 'velocity' && 'Deal Velocity Over Time'}
-            {type === 'distribution' && 'Stage Distribution Over Time'}
-            {type === 'winRate' && 'Win Rate Trend'}
-          </h3>
-        </div>
-        <p className="text-sm text-text-tertiary">No time series data available. Make sure your CSV includes date fields.</p>
-      </div>
-    );
-  }
-
-  // Transform data for Recharts
+  // Transform data for Recharts — must be before any early return
   const transformedData = useMemo(() => {
+    if (chartData.length === 0) return [];
+
     if (type === 'winRate') {
-      // Win rate is already in the right format
       return (chartData as any[]).map(point => ({
         date: point.date,
         'Win Rate %': point.count,
       }));
     }
 
-    // For velocity and distribution, we need to merge by date
     const dateMap = new Map<string, Record<string, number>>();
-    
+
     chartData.forEach((series: any) => {
       series.data.forEach((point: any) => {
         if (!dateMap.has(point.date)) {
@@ -86,9 +70,19 @@ export function TimeSeriesChart({ csvData, mappings, type }: TimeSeriesChartProp
       });
     });
 
-    return Array.from(dateMap.values()).sort((a, b) => 
+    return Array.from(dateMap.values()).sort((a, b) =>
       String(a.date || '').localeCompare(String(b.date || ''))
     );
+  }, [chartData, type]);
+
+  // Get all unique stages for legend — must be before any early return
+  const stages = useMemo(() => {
+    if (type === 'winRate' || chartData.length === 0) return [];
+    const stageSet = new Set<string>();
+    chartData.forEach((series: any) => {
+      stageSet.add(series.stage);
+    });
+    return Array.from(stageSet);
   }, [chartData, type]);
 
   // Generate colors for stages
@@ -105,15 +99,21 @@ export function TimeSeriesChart({ csvData, mappings, type }: TimeSeriesChartProp
     return stageColors[stage.toLowerCase()] || '#aaaaaa';
   };
 
-  // Get all unique stages for legend
-  const stages = useMemo(() => {
-    if (type === 'winRate') return [];
-    const stageSet = new Set<string>();
-    chartData.forEach((series: any) => {
-      stageSet.add(series.stage);
-    });
-    return Array.from(stageSet);
-  }, [chartData, type]);
+  if (chartData.length === 0) {
+    return (
+      <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <TrendingUp className="w-5 h-5 text-brand-950" />
+          <h3 className="font-semibold text-text-primary">
+            {type === 'velocity' && 'Deal Velocity Over Time'}
+            {type === 'distribution' && 'Stage Distribution Over Time'}
+            {type === 'winRate' && 'Win Rate Trend'}
+          </h3>
+        </div>
+        <p className="text-sm text-text-tertiary">No time series data available. Make sure your CSV includes date fields.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6">

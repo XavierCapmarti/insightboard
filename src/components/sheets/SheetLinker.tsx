@@ -179,10 +179,10 @@ export function SheetLinker({ onSheetLinked, isSubscribed = false }: SheetLinker
           <p className="font-medium mb-1">How to share your sheet:</p>
           <ol className="list-decimal list-inside space-y-1 ml-2">
             <li>Open your Google Sheet</li>
-            <li>Click "Share" button (top right)</li>
+            <li>Click &quot;Share&quot; button (top right)</li>
             <li>Add this email: <code className="bg-surface px-1 rounded">{sheetsClient.serviceAccountEmail}</code></li>
-            <li>Give it "Viewer" access</li>
-            <li>Click "Send"</li>
+            <li>Give it &quot;Viewer&quot; access</li>
+            <li>Click &quot;Send&quot;</li>
           </ol>
         </div>
       </div>
