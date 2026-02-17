@@ -54,7 +54,15 @@ jobs:
       - name: Build static site
         run: |
           echo "🔨 Building static site..."
-          npm run build
+          echo "Environment variables:"
+          echo "  GITHUB_PAGES=${GITHUB_PAGES}"
+          echo "  NODE_ENV=${NODE_ENV}"
+          npm run build || {
+            echo "❌ Build failed!"
+            echo "Checking for errors..."
+            cat package.json
+            exit 1
+          }
         env:
           GITHUB_PAGES: 'true'
           NODE_ENV: 'production'
@@ -96,10 +104,26 @@ jobs:
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
+        run: |
+          echo "📤 Preparing artifact upload..."
+          echo "Contents of out/ directory:"
+          ls -la out/ | head -20
+          echo "File count: $(find out -type f | wc -l)"
+          echo "Directory size: $(du -sh out | cut -f1)"
+        continue-on-error: false
+
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './out'
 
       - name: Deploy to GitHub Pages
         id: deployment
+        run: |
+          echo "🚀 Deploying to GitHub Pages..."
+          echo "Environment: github-pages"
+        continue-on-error: false
+
+      - name: Deploy Pages
         uses: actions/deploy-pages@v4
+        id: deployment
