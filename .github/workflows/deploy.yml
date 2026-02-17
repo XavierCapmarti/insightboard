@@ -79,10 +79,18 @@ jobs:
             exit 1
           fi
           
+          # Verify basePath is set correctly
+          if ! grep -q '/insightboard/_next' out/index.html; then
+            echo "⚠️  WARNING: basePath might not be set correctly"
+            echo "First few hrefs found:"
+            grep -o 'href="[^"]*"' out/index.html | head -3
+          fi
+          
           echo "✓ Build output verified:"
           echo "  - index.html: $(test -f out/index.html && echo 'exists' || echo 'missing')"
           echo "  - _next directory: $(test -d out/_next && echo 'exists' || echo 'missing')"
           echo "  - Total files: $(find out -type f | wc -l)"
+          echo "  - basePath check: $(grep -q '/insightboard/_next' out/index.html && echo 'correct' || echo 'incorrect')"
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
