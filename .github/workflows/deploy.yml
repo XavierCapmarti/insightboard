@@ -6,9 +6,14 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -116,37 +121,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      contents: write
+      contents: read
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          
-      - name: Setup Git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        continue-on-error: true
-        
-      - name: Check deployment status
-        run: |
-          if [ "${{ steps.deployment.outcome }}" != "success" ]; then
-            echo "⚠️ Deployment failed, but continuing..."
-            echo "This might be due to environment protection rules."
-            echo "Please configure the github-pages environment in repository settings:"
-            echo "https://github.com/XavierCapmarti/insightboard/settings/environments"
-            echo ""
-            echo "Allow 'main' branch in the environment deployment rules."
-          else
-            echo "✅ Deployment successful!"
-          fi
