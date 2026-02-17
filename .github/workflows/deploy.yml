@@ -6,21 +6,17 @@ on:
       - main
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -103,20 +99,30 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
+      - name: Prepare artifact
         run: |
           echo "📤 Preparing artifact upload..."
           echo "Contents of out/ directory:"
           ls -la out/ | head -20
           echo "File count: $(find out -type f | wc -l)"
           echo "Directory size: $(du -sh out | cut -f1)"
-        continue-on-error: false
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './out'
 
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
