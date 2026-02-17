@@ -31,10 +31,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Remove API routes (not needed for static export)
+      - name: Remove API routes and test files (not needed for static export)
         run: |
           rm -rf src/app/api || true
-          echo "✓ API routes removed for static export"
+          rm -rf src/__tests__ || true
+          echo "✓ API routes and tests removed for static export"
+
+      - name: Clear Next.js cache
+        run: |
+          rm -rf .next || true
+          echo "✓ Next.js cache cleared"
 
       - name: Build
         run: npm run build
