@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
   title: 'ClarLens - CSV to Insights in 5 Minutes',
@@ -13,9 +14,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-surface text-text-primary antialiased">
-        {children}
+    <html lang="en" className="overflow-x-hidden">
+      <body className="min-h-screen bg-surface text-text-primary antialiased overflow-x-hidden">
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </body>
     </html>
   );

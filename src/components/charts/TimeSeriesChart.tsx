@@ -33,6 +33,7 @@ interface TimeSeriesChartProps {
 }
 
 export function TimeSeriesChart({ csvData, mappings, type }: TimeSeriesChartProps) {
+  // All hooks must be called unconditionally before any early returns
   const chartData = useMemo(() => {
     if (csvData.length === 0) return [];
 
@@ -48,23 +49,7 @@ export function TimeSeriesChart({ csvData, mappings, type }: TimeSeriesChartProp
     }
   }, [csvData, mappings, type]);
 
-  if (chartData.length === 0) {
-    return (
-      <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <TrendingUp className="w-5 h-5 text-brand-950" />
-          <h3 className="font-semibold text-text-primary">
-            {type === 'velocity' && 'Deal Velocity Over Time'}
-            {type === 'distribution' && 'Stage Distribution Over Time'}
-            {type === 'winRate' && 'Win Rate Trend'}
-          </h3>
-        </div>
-        <p className="text-sm text-text-tertiary">No time series data available. Make sure your CSV includes date fields.</p>
-      </div>
-    );
-  }
-
-  // Transform data for Recharts
+  // Transform data for Recharts - always compute, even if empty
   const transformedData = useMemo(() => {
     if (type === 'winRate') {
       // Win rate is already in the right format
@@ -91,6 +76,16 @@ export function TimeSeriesChart({ csvData, mappings, type }: TimeSeriesChartProp
     );
   }, [chartData, type]);
 
+  // Get all unique stages for legend - always compute before early return
+  const stages = useMemo(() => {
+    if (type === 'winRate') return [];
+    const stageSet = new Set<string>();
+    chartData.forEach((series: any) => {
+      stageSet.add(series.stage);
+    });
+    return Array.from(stageSet);
+  }, [chartData, type]);
+
   // Generate colors for stages
   const stageColors: Record<string, string> = {
     'prospecting': '#6a6a6a',
@@ -105,15 +100,22 @@ export function TimeSeriesChart({ csvData, mappings, type }: TimeSeriesChartProp
     return stageColors[stage.toLowerCase()] || '#aaaaaa';
   };
 
-  // Get all unique stages for legend
-  const stages = useMemo(() => {
-    if (type === 'winRate') return [];
-    const stageSet = new Set<string>();
-    chartData.forEach((series: any) => {
-      stageSet.add(series.stage);
-    });
-    return Array.from(stageSet);
-  }, [chartData, type]);
+  // Early return after all hooks
+  if (chartData.length === 0) {
+    return (
+      <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <TrendingUp className="w-5 h-5 text-brand-950" />
+          <h3 className="font-semibold text-text-primary">
+            {type === 'velocity' && 'Deal Velocity Over Time'}
+            {type === 'distribution' && 'Stage Distribution Over Time'}
+            {type === 'winRate' && 'Win Rate Trend'}
+          </h3>
+        </div>
+        <p className="text-sm text-text-tertiary">No time series data available. Make sure your CSV includes date fields.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6">

@@ -9,6 +9,7 @@ import {
   BarChart3,
   Zap,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 
 const SAMPLE_CSVS = [
@@ -21,6 +22,7 @@ const SAMPLE_CSVS = [
 export default function HomePage() {
   const [isLoadingSample, setIsLoadingSample] = useState(false);
   const [selectedSample, setSelectedSample] = useState<string | null>(null);
+  const [isLoadingDemo, setIsLoadingDemo] = useState(false);
 
   const handleTrySample = async (sampleFile: string) => {
     setIsLoadingSample(true);
@@ -29,21 +31,65 @@ export default function HomePage() {
     window.location.href = `/onboarding?sample=${sampleFile}`;
   };
 
+  const handleTryDemoDataset = async () => {
+    setIsLoadingDemo(true);
+    try {
+      // Fetch the golden demo CSV
+      const response = await fetch('/sample-data.csv');
+      if (!response.ok) throw new Error('Failed to load demo dataset');
+      const csvText = await response.text();
+
+      // Ingest directly using existing API
+      const ingestResponse = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceType: 'csv_upload',
+          config: {
+            fieldMappings: [
+              { sourceField: 'stage', targetField: 'status' },
+              { sourceField: 'created_at', targetField: 'createdAt' },
+              { sourceField: 'owner', targetField: 'ownerId' },
+              { sourceField: 'value', targetField: 'value' },
+            ],
+          },
+          content: csvText,
+        }),
+      });
+
+      if (!ingestResponse.ok) {
+        throw new Error('Failed to ingest demo dataset');
+      }
+
+      const result = await ingestResponse.json();
+      if (result.datasetId) {
+        // Redirect to dashboard with datasetId
+        window.location.href = `/dashboard-template?datasetId=${result.datasetId}&template=funnel-analysis`;
+      } else {
+        throw new Error('No datasetId returned');
+      }
+    } catch (error) {
+      console.error('Failed to load demo dataset:', error);
+      setIsLoadingDemo(false);
+      alert('Failed to load demo dataset. Please try uploading your own CSV.');
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-surface overflow-x-hidden">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-surface-tertiary bg-surface-secondary/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-950 flex items-center justify-center">
-              <BarChart3 className="w-5 h-5 text-surface" />
+            <div className="w-8 h-8 rounded-lg bg-brand-950 flex items-center justify-center flex-shrink-0">
+              <BarChart3 className="w-5 h-5 text-text-primary" />
             </div>
-            <span className="font-semibold text-lg text-text-primary">ClarLens</span>
+            <span className="font-semibold text-lg text-text-primary whitespace-nowrap">ClarLens</span>
           </div>
           
           <Link
             href="/onboarding"
-            className="px-4 py-2 bg-brand-950 text-surface text-sm font-medium rounded-lg hover:bg-brand-900 transition-colors"
+            className="px-4 py-2 bg-brand-950 text-text-primary text-sm font-medium rounded-lg hover:bg-brand-900 transition-colors whitespace-nowrap"
           >
             Upload CSV
           </Link>
@@ -51,19 +97,19 @@ export default function HomePage() {
       </header>
 
       {/* Hero */}
-      <section className="pt-32 pb-20 px-6">
+      <section className="pt-32 pb-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-surface-tertiary text-text-secondary text-sm font-medium rounded-full mb-6 border border-surface-tertiary">
-            <Zap className="w-4 h-4" />
-            CSV to insights in 5 minutes
+            <Zap className="w-4 h-4 flex-shrink-0" />
+            <span className="whitespace-nowrap">CSV to insights in 5 minutes</span>
           </div>
           
-          <h1 className="text-5xl md:text-6xl font-bold text-text-primary leading-tight mb-6">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-text-primary leading-tight mb-6">
             See your data{' '}
             <span className="text-brand-950">clearly</span>
           </h1>
           
-          <p className="text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl text-text-secondary mb-8 max-w-2xl mx-auto">
             Upload your CSV and get instant insights. No setup, no code, no consultants. 
             Just clarity.
           </p>
@@ -71,22 +117,39 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/onboarding"
-              className="flex items-center gap-2 px-6 py-3 bg-brand-950 text-surface font-medium rounded-lg hover:bg-brand-900 transition-all"
+              className="flex items-center gap-2 px-6 py-3 bg-brand-950 text-text-primary font-medium rounded-lg hover:bg-brand-900 transition-all whitespace-nowrap"
             >
               Upload CSV
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5 flex-shrink-0" />
             </Link>
+            <button
+              onClick={handleTryDemoDataset}
+              disabled={isLoadingDemo}
+              className="flex items-center gap-2 px-6 py-3 bg-surface-secondary text-text-primary font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary transition-all disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {isLoadingDemo ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
+                  <span>Loading demo...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5 flex-shrink-0" />
+                  <span>Try sample dataset</span>
+                </>
+              )}
+            </button>
           </div>
           
           <div className="mt-6">
             <p className="text-sm text-text-tertiary mb-3">Or try with sample data:</p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 px-4">
               {SAMPLE_CSVS.map((sample) => (
                 <button
                   key={sample.id}
                   onClick={() => handleTrySample(sample.file)}
                   disabled={isLoadingSample && selectedSample === sample.file}
-                  className="px-4 py-2 bg-surface-secondary text-text-secondary text-sm font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary hover:text-text-primary transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-surface-secondary text-text-secondary text-sm font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary hover:text-text-primary transition-colors disabled:opacity-50 whitespace-nowrap"
                   title={sample.description}
                 >
                   {isLoadingSample && selectedSample === sample.file ? 'Loading...' : sample.name}
@@ -102,39 +165,39 @@ export default function HomePage() {
       </section>
 
       {/* How it works */}
-      <section className="py-20 px-6 bg-surface-secondary">
+      <section className="py-20 px-4 sm:px-6 bg-surface-secondary">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-text-primary mb-12 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-12 text-center">
             How it works
           </h2>
           
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-12 h-12 rounded-lg bg-surface-tertiary flex items-center justify-center mx-auto mb-4 border border-surface-tertiary">
+              <div className="w-12 h-12 rounded-lg bg-surface-tertiary flex items-center justify-center mx-auto mb-4 border border-surface-tertiary flex-shrink-0">
                 <Upload className="w-6 h-6 text-text-primary" />
               </div>
               <h3 className="font-semibold text-text-primary mb-2">1. Upload CSV</h3>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm text-text-secondary px-4">
                 Drag & drop or browse. We support any CSV format.
               </p>
             </div>
             
             <div className="text-center">
-              <div className="w-12 h-12 rounded-lg bg-surface-tertiary flex items-center justify-center mx-auto mb-4 border border-surface-tertiary">
+              <div className="w-12 h-12 rounded-lg bg-surface-tertiary flex items-center justify-center mx-auto mb-4 border border-surface-tertiary flex-shrink-0">
                 <FileSpreadsheet className="w-6 h-6 text-text-primary" />
               </div>
               <h3 className="font-semibold text-text-primary mb-2">2. Map Fields</h3>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm text-text-secondary px-4">
                 We auto-detect. You confirm. Takes seconds.
               </p>
             </div>
             
-            <div className="text-center">
-              <div className="w-12 h-12 rounded-lg bg-surface-tertiary flex items-center justify-center mx-auto mb-4 border border-surface-tertiary">
+            <div className="text-center sm:col-span-2 md:col-span-1">
+              <div className="w-12 h-12 rounded-lg bg-surface-tertiary flex items-center justify-center mx-auto mb-4 border border-surface-tertiary flex-shrink-0">
                 <BarChart3 className="w-6 h-6 text-text-primary" />
               </div>
               <h3 className="font-semibold text-text-primary mb-2">3. Get Insights</h3>
-              <p className="text-sm text-text-secondary">
+              <p className="text-sm text-text-secondary px-4">
                 Instant dashboard with real metrics from your data.
               </p>
             </div>
@@ -143,9 +206,9 @@ export default function HomePage() {
       </section>
 
       {/* Features */}
-      <section className="py-20 px-6">
+      <section className="py-20 px-4 sm:px-6">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-text-primary mb-12 text-center">
+          <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-12 text-center">
             What you get
           </h2>
           
@@ -158,8 +221,8 @@ export default function HomePage() {
               'Date range filtering',
               'Export-ready visualizations',
             ].map((feature) => (
-              <div key={feature} className="flex items-center gap-3 text-text-secondary">
-                <CheckCircle2 className="w-5 h-5 text-brand-950 flex-shrink-0" />
+              <div key={feature} className="flex items-start gap-3 text-text-secondary">
+                <CheckCircle2 className="w-5 h-5 text-brand-950 flex-shrink-0 mt-0.5" />
                 <span>{feature}</span>
               </div>
             ))}
@@ -168,9 +231,9 @@ export default function HomePage() {
       </section>
 
       {/* CTA */}
-      <section className="py-20 px-6 bg-surface-secondary border-t border-surface-tertiary">
+      <section className="py-20 px-4 sm:px-6 bg-surface-secondary border-t border-surface-tertiary">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-text-primary mb-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-text-primary mb-4">
             Ready to see your data clearly?
           </h2>
           <p className="text-lg text-text-secondary mb-8">
@@ -180,22 +243,22 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/onboarding"
-              className="flex items-center gap-2 px-6 py-3 bg-brand-950 text-surface font-medium rounded-lg hover:bg-brand-900 transition-colors"
+              className="flex items-center gap-2 px-6 py-3 bg-brand-950 text-text-primary font-medium rounded-lg hover:bg-brand-900 transition-colors whitespace-nowrap"
             >
               Upload CSV
-              <ArrowRight className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5 flex-shrink-0" />
             </Link>
           </div>
           
           <div className="mt-6">
             <p className="text-sm text-text-tertiary mb-3">Or try with sample data:</p>
-            <div className="flex flex-wrap items-center justify-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 px-4">
               {SAMPLE_CSVS.map((sample) => (
                 <button
                   key={sample.id}
                   onClick={() => handleTrySample(sample.file)}
                   disabled={isLoadingSample && selectedSample === sample.file}
-                  className="px-4 py-2 bg-surface-secondary text-text-secondary text-sm font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary hover:text-text-primary transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-surface-secondary text-text-secondary text-sm font-medium rounded-lg border border-surface-tertiary hover:bg-surface-tertiary hover:text-text-primary transition-colors disabled:opacity-50 whitespace-nowrap"
                   title={sample.description}
                 >
                   {isLoadingSample && selectedSample === sample.file ? 'Loading...' : sample.name}
@@ -207,16 +270,16 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 px-6 border-t border-surface-tertiary">
+      <footer className="py-12 px-4 sm:px-6 border-t border-surface-tertiary">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-brand-950 flex items-center justify-center">
-              <BarChart3 className="w-4 h-4 text-surface" />
+            <div className="w-6 h-6 rounded bg-brand-950 flex items-center justify-center flex-shrink-0">
+              <BarChart3 className="w-4 h-4 text-text-primary" />
             </div>
-            <span className="font-medium text-text-secondary">ClarLens</span>
+            <span className="font-medium text-text-secondary whitespace-nowrap">ClarLens</span>
           </div>
           
-          <p className="text-sm text-text-tertiary">
+          <p className="text-sm text-text-tertiary text-center md:text-left">
             © 2025 ClarLens. All rights reserved.
           </p>
         </div>

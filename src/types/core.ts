@@ -128,6 +128,7 @@ export type PeriodType =
   | 'month'
   | 'quarter'
   | 'year'
+  | 'all'
   | 'custom';
 
 export interface MetricDefinition {

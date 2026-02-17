@@ -143,13 +143,11 @@ export class GoogleSheetsAdapter extends BaseAdapter<SheetsRawData> {
 
   /**
    * Fetch sheet data using Google Sheets API
+   * Supports both OAuth (preferred) and service account (fallback)
    */
   private async fetchSheetData(
     config: GoogleSheetsConfig
   ): Promise<SheetsRawData> {
-    // Use the sheets client to fetch data
-    const { sheetsClient } = await import('@/lib/sheets');
-    
     if (!config.spreadsheetId) {
       throw new Error('Spreadsheet ID is required');
     }
@@ -157,8 +155,28 @@ export class GoogleSheetsAdapter extends BaseAdapter<SheetsRawData> {
     const range = config.range || config.sheetName || 'Sheet1';
     const fullRange = range.includes('!') ? range : `${range}!A:Z`;
 
-    // Fetch data from sheet
-    const values = await sheetsClient.readRange(config.spreadsheetId, fullRange);
+    let values: (string | number | boolean)[][] | null = null;
+
+    // Try OAuth first if tokens are provided
+    if (config.oauthTokens) {
+      try {
+        const { sheetsOAuthClient } = await import('@/lib/sheetsOAuth');
+        values = await sheetsOAuthClient.readRange(
+          config.spreadsheetId,
+          fullRange,
+          config.oauthTokens
+        );
+      } catch (error) {
+        console.warn('OAuth fetch failed, trying service account:', error);
+        // Fall through to service account
+      }
+    }
+
+    // Fallback to service account if OAuth failed or not provided
+    if (!values) {
+      const { sheetsClient } = await import('@/lib/sheets');
+      values = await sheetsClient.readRange(config.spreadsheetId, fullRange);
+    }
     
     if (!values || values.length === 0) {
       return {
@@ -171,7 +189,8 @@ export class GoogleSheetsAdapter extends BaseAdapter<SheetsRawData> {
     }
 
     // Convert to our format
-    const { headers, rows } = sheetsClient.convertToCSVFormat(values);
+    const { sheetsOAuthClient } = await import('@/lib/sheetsOAuth');
+    const { headers, rows } = sheetsOAuthClient.convertToCSVFormat(values);
     
     return {
       spreadsheetId: config.spreadsheetId,
@@ -187,9 +206,25 @@ export class GoogleSheetsAdapter extends BaseAdapter<SheetsRawData> {
    */
   async testConnection(config: GoogleSheetsConfig): Promise<boolean> {
     try {
-      // Attempt to fetch sheet metadata
-      // This validates credentials and spreadsheet access
-      return false; // TODO: Implement
+      if (!config.spreadsheetId) {
+        return false;
+      }
+
+      // Try OAuth first if tokens are provided
+      if (config.oauthTokens) {
+        try {
+          const { sheetsOAuthClient } = await import('@/lib/sheetsOAuth');
+          await sheetsOAuthClient.getSheetMetadata(config.spreadsheetId, config.oauthTokens);
+          return true;
+        } catch {
+          return false;
+        }
+      }
+
+      // Fallback to service account
+      const { sheetsClient } = await import('@/lib/sheets');
+      await sheetsClient.getSheetMetadata(config.spreadsheetId);
+      return true;
     } catch {
       return false;
     }

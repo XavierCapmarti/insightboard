@@ -503,6 +503,13 @@ export function createPeriod(type: PeriodType, date: Date = new Date()): Period 
       label = format(date, 'yyyy');
       break;
 
+    case 'all':
+      // All time - use very wide range
+      start = new Date('2000-01-01');
+      end = new Date('2100-12-31');
+      label = 'All Time';
+      break;
+
     default:
       start = startOfMonth(date);
       end = endOfMonth(date);

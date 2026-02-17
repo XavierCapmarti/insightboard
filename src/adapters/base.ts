@@ -294,16 +294,22 @@ export abstract class BaseAdapter<TRawData = unknown>
             record.status = String(transformedValue);
             break;
           case 'createdAt':
-            record.createdAt =
-              transformedValue instanceof Date
+            if (transformedValue) {
+              const date = transformedValue instanceof Date
                 ? transformedValue
                 : new Date(String(transformedValue));
+              // Use current date if parsing fails
+              record.createdAt = isNaN(date.getTime()) ? new Date() : date;
+            }
             break;
           case 'updatedAt':
-            record.updatedAt =
-              transformedValue instanceof Date
+            if (transformedValue) {
+              const date = transformedValue instanceof Date
                 ? transformedValue
                 : new Date(String(transformedValue));
+              // Use current date if parsing fails
+              record.updatedAt = isNaN(date.getTime()) ? new Date() : date;
+            }
             break;
           case 'closedAt':
             if (transformedValue) {

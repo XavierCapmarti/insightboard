@@ -159,3 +159,4 @@ export function getChartColor(index: number): string {
   return palette[index % palette.length];
 }
 
+

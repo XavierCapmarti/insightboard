@@ -212,7 +212,7 @@ export default function DashboardPage() {
           <BarChart3 className="w-12 h-12 text-text-tertiary mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-text-primary mb-2">No data loaded</h2>
           <p className="text-text-secondary mb-6">
-            Upload a CSV file to generate insights.
+            Upload your CSV file to see instant insights and analytics.
           </p>
           <Link
             href="/onboarding"

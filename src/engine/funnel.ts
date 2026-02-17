@@ -283,6 +283,72 @@ export class FunnelEngine {
 }
 
 // =============================================================================
+// PREDEFINED STAGE ORDER
+// =============================================================================
+
+/**
+ * Normalize a stage name for matching (lowercase, no spaces/underscores)
+ */
+function normalizeStage(stage: string): string {
+  return stage.toLowerCase().replace(/[\s_-]+/g, '');
+}
+
+/**
+ * Predefined stage progression for common sales pipelines.
+ * Lower number = earlier in funnel.
+ * Unknown stages get order 999.
+ */
+const STAGE_ORDER_MAP: Record<string, number> = {
+  // Early stages
+  'lead': 0,
+  'newlead': 0,
+  'new': 0,
+  'prospecting': 1,
+  'prospect': 1,
+  'inquiry': 1,
+  'contacted': 2,
+  'contact': 2,
+  
+  // Qualification stages
+  'qualified': 3,
+  'qualification': 3,
+  'qualifying': 3,
+  'discovery': 4,
+  'demo': 5,
+  'meeting': 5,
+  
+  // Proposal stages
+  'proposal': 6,
+  'proposalsent': 6,
+  'quote': 6,
+  'quotesent': 6,
+  
+  // Negotiation stages
+  'negotiation': 7,
+  'negotiating': 7,
+  'review': 7,
+  'evaluation': 7,
+  
+  // Closed stages
+  'closedwon': 8,
+  'won': 8,
+  'closed': 8,
+  'converted': 8,
+  'closedlost': 9,
+  'lost': 9,
+  'disqualified': 9,
+  'churned': 9,
+};
+
+/**
+ * Get the predefined order for a stage name
+ */
+function getStageOrderFromMap(stageName: string): number {
+  const normalized = normalizeStage(stageName);
+  return STAGE_ORDER_MAP[normalized] ?? 999;
+}
+
+// =============================================================================
 // FACTORY
 // =============================================================================
 
@@ -295,7 +361,8 @@ export function createFunnelEngine(
 }
 
 /**
- * Create stages from unique statuses in records
+ * Create stages from unique statuses in records.
+ * Sorts by predefined progression order, with unknown stages at the end.
  */
 export function inferStagesFromRecords(records: DataRecord[]): FunnelStage[] {
   const uniqueStatuses = new Set<string>();
@@ -304,8 +371,23 @@ export function inferStagesFromRecords(records: DataRecord[]): FunnelStage[] {
     uniqueStatuses.add(record.status);
   }
 
-  return Array.from(uniqueStatuses).map((name, index) => ({
+  // Convert to array and sort by predefined order
+  const stages = Array.from(uniqueStatuses).map((name) => ({
     name,
+    predefinedOrder: getStageOrderFromMap(name),
+  }));
+
+  // Sort by predefined order, then alphabetically for ties
+  stages.sort((a, b) => {
+    if (a.predefinedOrder !== b.predefinedOrder) {
+      return a.predefinedOrder - b.predefinedOrder;
+    }
+    return a.name.localeCompare(b.name);
+  });
+
+  // Assign sequential order based on sorted position
+  return stages.map((stage, index) => ({
+    name: stage.name,
     order: index,
   }));
 }

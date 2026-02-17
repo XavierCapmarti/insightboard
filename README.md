@@ -9,7 +9,7 @@ Upload your CSV and get instant insights. No setup, no code, just clarity.
 ```bash
 npm install
 npm run dev
-# Open http://localhost:3001
+# Open http://localhost:3002
 ```
 
 ## Project Structure

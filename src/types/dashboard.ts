@@ -257,3 +257,4 @@ export interface DashboardTemplatePreset {
   defaultConfig: Partial<DashboardConfig>;
 }
 
+

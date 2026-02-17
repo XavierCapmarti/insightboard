@@ -44,5 +44,7 @@ next-env.d.ts
 *.tmp
 *.temp
 
-.vercel
-.env*.local
+# Data storage
+data/datasets/
+
+

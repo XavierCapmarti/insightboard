@@ -6,6 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { getTemplatePresets, getTemplate } from '@/templates';
+import { logger } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -20,11 +21,12 @@ export async function GET() {
       })),
     });
   } catch (error) {
-    console.error('Templates error:', error);
+    logger.error('Templates error', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to fetch templates' },
       { status: 500 }
     );
   }
 }
+
 

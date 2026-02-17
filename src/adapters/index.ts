@@ -70,3 +70,4 @@ export function registerAdapter(adapter: DataAdapter): void {
   adapterRegistry.register(adapter);
 }
 
+

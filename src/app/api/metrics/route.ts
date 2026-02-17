@@ -7,6 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMetricsEngine, createPeriod, getPreviousPeriod } from '@/engine';
 import { MetricDefinition, PeriodType, DataRecord } from '@/types/core';
+import { rateLimiters } from '@/lib/rateLimit';
+import { logger } from '@/lib/logger';
+import { z } from 'zod';
 
 // Mock data store - in production, this would be a database
 const mockRecords: DataRecord[] = [
@@ -75,11 +78,49 @@ const DEFAULT_METRICS: MetricDefinition[] = [
 // Mark as dynamic since we use searchParams
 export const dynamic = 'force-dynamic';
 
+// Query parameter validation schema
+const metricsQuerySchema = z.object({
+  period: z.enum(['day', 'week', 'month', 'quarter', 'year']).optional(),
+  metrics: z.string().optional(),
+});
+
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
+  
+  // Rate limiting
+  const rateLimitResponse = rateLimiters.metrics(request);
+  if (rateLimitResponse) {
+    logger.warn('Rate limit exceeded for metrics API', {
+      ip: request.headers.get('x-forwarded-for') || 'unknown',
+    });
+    return rateLimitResponse;
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
-    const periodType = (searchParams.get('period') || 'month') as PeriodType;
-    const metricIds = searchParams.get('metrics')?.split(',');
+    
+    // Validate query parameters
+    const queryParams = {
+      period: searchParams.get('period') || undefined,
+      metrics: searchParams.get('metrics') || undefined,
+    };
+    
+    const validationResult = metricsQuerySchema.safeParse(queryParams);
+    if (!validationResult.success) {
+      const errors = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      logger.warn('Invalid metrics query parameters', { errors: validationResult.error.errors });
+      return NextResponse.json(
+        { 
+          error: 'Invalid query parameters',
+          message: 'Please check your query parameters and try again.',
+          details: errors,
+        },
+        { status: 400 }
+      );
+    }
+    
+    const periodType = (validationResult.data.period || 'month') as PeriodType;
+    const metricIds = validationResult.data.metrics?.split(',');
 
     // Create periods
     const currentPeriod = createPeriod(periodType);
@@ -100,6 +141,12 @@ export async function GET(request: NextRequest) {
       previousPeriod
     );
 
+    const duration = Date.now() - startTime;
+    logger.apiRequest('GET', '/api/metrics', 200, duration, {
+      periodType,
+      metricCount: results.length,
+    });
+
     return NextResponse.json({
       period: {
         current: currentPeriod,
@@ -108,9 +155,15 @@ export async function GET(request: NextRequest) {
       metrics: results,
     });
   } catch (error) {
-    console.error('Metrics error:', error);
+    const duration = Date.now() - startTime;
+    logger.error('Metrics computation failed', error, { duration });
+    logger.apiRequest('GET', '/api/metrics', 500, duration);
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to compute metrics' },
+      { 
+        error: 'Failed to compute metrics',
+        message: error instanceof Error ? error.message : 'An unexpected error occurred while computing metrics. Please try again or contact support if the problem persists.',
+      },
       { status: 500 }
     );
   }

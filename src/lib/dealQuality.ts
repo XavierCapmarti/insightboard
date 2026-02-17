@@ -228,3 +228,4 @@ function formatRange(min: number, max: number): string {
   return `${formatValue(min)} - ${formatValue(max)}`;
 }
 
+

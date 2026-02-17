@@ -171,6 +171,11 @@ export interface AdapterRegistry {
 // =============================================================================
 
 export interface GoogleSheetsConfig {
+  oauthTokens?: {
+    access_token: string;
+    refresh_token?: string;
+    expiry_date?: number;
+  };
   spreadsheetId: string;
   sheetName?: string;
   range?: string;

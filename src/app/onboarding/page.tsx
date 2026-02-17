@@ -82,13 +82,12 @@ function OnboardingContent() {
         required = false;
       }
       
-      if (target) {
-        suggestions.push({
-          sourceField: header,
-          targetField: target,
-          required,
-        });
-      }
+      // Always create a mapping entry, even if no auto-suggestion
+      suggestions.push({
+        sourceField: header,
+        targetField: target,
+        required,
+      });
     });
     
     return suggestions;
@@ -182,9 +181,18 @@ function OnboardingContent() {
   };
 
   const handleMappingChange = (sourceField: string, targetField: string) => {
-    setMappings(prev => prev.map(m => 
-      m.sourceField === sourceField ? { ...m, targetField } : m
-    ));
+    setMappings(prev => {
+      const existing = prev.find(m => m.sourceField === sourceField);
+      if (existing) {
+        // Update existing mapping
+        return prev.map(m => 
+          m.sourceField === sourceField ? { ...m, targetField } : m
+        );
+      } else {
+        // Create new mapping if it doesn't exist
+        return [...prev, { sourceField, targetField, required: false }];
+      }
+    });
   };
 
   const canProceed = () => {
@@ -193,15 +201,139 @@ function OnboardingContent() {
     return hasStatus && hasDate;
   };
 
-  const handlePreview = () => {
-    // Store data in sessionStorage for dashboard
-    sessionStorage.setItem('clarLensCSVData', JSON.stringify(csvData));
-    sessionStorage.setItem('clarLensMappings', JSON.stringify(mappings));
-    setStep('preview');
+  const [datasetId, setDatasetId] = useState<string | null>(() => {
+    // Try to restore from sessionStorage on mount
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('clarLensDatasetId');
+    }
+    return null;
+  });
+  const [previewSummary, setPreviewSummary] = useState<{
+    rowCount: number;
+    dateRange: { min?: Date; max?: Date };
+    uniqueStages: string[];
+    uniqueOwners: string[];
+  } | null>(null);
+
+  const handlePreview = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Convert CSV data back to text for API
+      const csvText = convertRowsToCSV(csvData, headers);
+      
+      // Call ingest API
+      const response = await fetch('/api/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sourceType: 'csv_upload',
+          config: {
+            fieldMappings: mappings.map(m => ({
+              sourceField: m.sourceField,
+              targetField: m.targetField,
+            })),
+          },
+          content: csvText,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to ingest data');
+      }
+
+      const result = await response.json();
+      
+      if (!result.datasetId) {
+        throw new Error(result.error || 'No datasetId returned from server');
+      }
+      
+      console.log('✓ Dataset created:', result.datasetId);
+      console.log('✓ Records normalized:', result.rowCount);
+      
+      // Store datasetId and CSV data in sessionStorage as backup (for re-ingestion if server restarts)
+      sessionStorage.setItem('clarLensDatasetId', result.datasetId);
+      sessionStorage.setItem('clarLensCSVData', csvText);
+      sessionStorage.setItem('clarLensMappings', JSON.stringify(mappings));
+      
+      setDatasetId(result.datasetId);
+      
+      // Compute preview summary
+      const summary = computePreviewSummary(csvData, mappings);
+      setPreviewSummary(summary);
+      
+      setStep('preview');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to process data');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLaunch = () => {
-    router.push('/dashboard');
+    if (datasetId) {
+      const url = `/dashboard-template?datasetId=${encodeURIComponent(datasetId)}&template=funnel-analysis`;
+      console.log('Navigating to:', url);
+      router.push(url);
+    } else {
+      console.error('No datasetId available, using fallback');
+      // Fallback to old flow
+      sessionStorage.setItem('clarLensCSVData', JSON.stringify(csvData));
+      sessionStorage.setItem('clarLensMappings', JSON.stringify(mappings));
+      router.push('/dashboard');
+    }
+  };
+
+  const convertRowsToCSV = (rows: CSVRow[], headers: string[]): string => {
+    const lines = [headers.join(',')];
+    rows.forEach(row => {
+      const values = headers.map(h => row[h] || '');
+      lines.push(values.join(','));
+    });
+    return lines.join('\n');
+  };
+
+  const computePreviewSummary = (
+    data: CSVRow[],
+    mappings: FieldMapping[]
+  ): { rowCount: number; dateRange: { min?: Date; max?: Date }; uniqueStages: string[]; uniqueOwners: string[] } => {
+    const statusField = mappings.find(m => m.targetField === 'status');
+    const ownerField = mappings.find(m => m.targetField === 'ownerId');
+    const dateField = mappings.find(m => m.targetField === 'createdAt');
+    
+    const stages = new Set<string>();
+    const owners = new Set<string>();
+    const dates: Date[] = [];
+    
+    data.forEach(row => {
+      if (statusField) {
+        const stage = row[statusField.sourceField];
+        if (stage) stages.add(stage);
+      }
+      if (ownerField) {
+        const owner = row[ownerField.sourceField];
+        if (owner) owners.add(owner);
+      }
+      if (dateField) {
+        const dateStr = row[dateField.sourceField];
+        if (dateStr) {
+          const date = new Date(dateStr);
+          if (!isNaN(date.getTime())) dates.push(date);
+        }
+      }
+    });
+    
+    return {
+      rowCount: data.length,
+      dateRange: dates.length > 0 ? {
+        min: new Date(Math.min(...dates.map(d => d.getTime()))),
+        max: new Date(Math.max(...dates.map(d => d.getTime()))),
+      } : {},
+      uniqueStages: Array.from(stages).sort(),
+      uniqueOwners: Array.from(owners).sort(),
+    };
   };
 
   return (
@@ -232,7 +364,7 @@ function OnboardingContent() {
               Upload your CSV
             </h2>
             <p className="text-text-secondary mb-8">
-              Drag & drop your file or click to browse. We'll detect the structure automatically.
+              Drag & drop your file or click to browse. We&apos;ll detect the structure automatically.
             </p>
 
             {error && (
@@ -353,7 +485,7 @@ function OnboardingContent() {
               Map your fields
             </h2>
             <p className="text-text-secondary mb-6">
-              We've auto-detected your fields. Confirm the mappings below.
+              We&apos;ve auto-detected your fields. Confirm the mappings below.
             </p>
 
             <div className="mb-6 p-4 bg-surface-secondary border border-brand-600/20 rounded-lg">
@@ -420,11 +552,20 @@ function OnboardingContent() {
               </button>
               <button
                 onClick={handlePreview}
-                disabled={!canProceed()}
+                disabled={!canProceed() || isLoading}
                 className="flex items-center gap-2 px-6 py-3 bg-brand-950 text-surface font-medium rounded-lg hover:bg-brand-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continue
-                <ArrowRight className="w-4 h-4" />
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    Continue
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -443,44 +584,44 @@ function OnboardingContent() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               <div className="p-4 bg-surface-secondary rounded-lg border border-surface-tertiary">
                 <p className="text-sm text-text-tertiary mb-1">Total Rows</p>
-                <p className="text-2xl font-bold text-text-primary">{csvData.length}</p>
+                <p className="text-2xl font-bold text-text-primary">
+                  {previewSummary?.rowCount || csvData.length}
+                </p>
               </div>
               <div className="p-4 bg-surface-secondary rounded-lg border border-surface-tertiary">
                 <p className="text-sm text-text-tertiary mb-1">Date Range</p>
                 <p className="text-lg font-semibold text-text-primary">
-                  {(() => {
-                    const dateField = mappings.find(m => m.targetField === 'createdAt' || m.targetField === 'updatedAt');
-                    if (!dateField) return 'N/A';
-                    const dates = csvData.map(row => row[dateField.sourceField]).filter(Boolean);
-                    if (dates.length === 0) return 'N/A';
-                    const sorted = dates.sort();
-                    return `${sorted[0]} - ${sorted[sorted.length - 1]}`;
-                  })()}
+                  {previewSummary?.dateRange?.min && previewSummary?.dateRange?.max
+                    ? `${previewSummary.dateRange.min.toLocaleDateString()} - ${previewSummary.dateRange.max.toLocaleDateString()}`
+                    : 'N/A'}
                 </p>
               </div>
               <div className="p-4 bg-surface-secondary rounded-lg border border-surface-tertiary">
                 <p className="text-sm text-text-tertiary mb-1">Unique Owners</p>
                 <p className="text-2xl font-bold text-text-primary">
-                  {(() => {
-                    const ownerField = mappings.find(m => m.targetField === 'ownerId');
-                    if (!ownerField) return 'N/A';
-                    const owners = new Set(csvData.map(row => row[ownerField.sourceField]).filter(Boolean));
-                    return owners.size || 'N/A';
-                  })()}
+                  {previewSummary?.uniqueOwners.length || 'N/A'}
                 </p>
               </div>
               <div className="p-4 bg-surface-secondary rounded-lg border border-surface-tertiary">
                 <p className="text-sm text-text-tertiary mb-1">Unique Stages</p>
                 <p className="text-2xl font-bold text-text-primary">
-                  {(() => {
-                    const statusField = mappings.find(m => m.targetField === 'status');
-                    if (!statusField) return 'N/A';
-                    const stages = new Set(csvData.map(row => row[statusField.sourceField]).filter(Boolean));
-                    return stages.size || 'N/A';
-                  })()}
+                  {previewSummary?.uniqueStages.length || 'N/A'}
                 </p>
               </div>
             </div>
+            
+            {previewSummary && previewSummary.uniqueStages.length > 0 && (
+              <div className="mb-8 p-4 bg-surface-secondary rounded-lg border border-brand-600/20">
+                <p className="text-sm font-medium text-text-primary mb-2">Detected Stages:</p>
+                <div className="flex flex-wrap gap-2">
+                  {previewSummary.uniqueStages.map(stage => (
+                    <span key={stage} className="px-2 py-1 bg-surface-tertiary text-text-secondary text-xs rounded">
+                      {stage}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Sample rows */}
             <div className="bg-surface-secondary rounded-lg border border-brand-600/20 p-6 mb-8">

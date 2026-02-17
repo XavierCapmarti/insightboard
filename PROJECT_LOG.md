@@ -9,9 +9,9 @@ Personal side project: CSV to insights in 5 minutes.
 | Field | Value |
 |-------|-------|
 | Repo | [github.com/xaviercapmarti-png/solitude](https://github.com/xaviercapmarti-png/solitude) |
-| Vercel | (not yet deployed) |
+| Deployment | (self-hosted or independent platform) |
 | Domain | (TBD) |
-| Tech | Next.js 14, TypeScript, Tailwind, Recharts |
+| Tech | Next.js 16, TypeScript, Tailwind, Recharts |
 
 ---
 
@@ -28,10 +28,10 @@ Personal side project: CSV to insights in 5 minutes.
 
 ### 2025-01-06 - Decoupling from Company Stack
 - Initialized git with personal author config
-- Added Resend email infrastructure
+- Added email infrastructure
 - Created .env.example with documented vars
 - Added /api/test-email endpoint
-- Ready for personal Vercel deployment
+- Ready for independent deployment
 
 ### 2025-01-06 - Renamed to ClarLens + Track A Complete
 - Renamed InsightBoard → ClarLens across codebase
@@ -51,10 +51,10 @@ Personal side project: CSV to insights in 5 minutes.
 ## Next Steps
 
 - [ ] Create GitHub repo and push
-- [ ] Deploy to personal Vercel account
-- [ ] Set up Resend with verified domain
+- [ ] Deploy to independent hosting platform
+- [ ] Set up email with verified domain
 - [ ] Wire up real data flow end-to-end
-- [ ] Add authentication (NextAuth or Clerk)
+- [ ] Add authentication (open-source solution)
 - [ ] Connect database for persistence
 
 ---

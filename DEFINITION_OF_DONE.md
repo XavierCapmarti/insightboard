@@ -107,3 +107,4 @@ Contains:
 - Columns: id, owner, stage, value, created_at, updated_at, closed_at
 - Loads via "Try with sample CSV" button on landing page
 
+
