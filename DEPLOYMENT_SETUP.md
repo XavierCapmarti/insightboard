@@ -1,17 +1,34 @@
 # GitHub Pages Deployment Setup
 
-## Required Configuration
+## ⚠️ CRITICAL: Environment Configuration Required
 
-For this workflow to deploy successfully, you need to configure the `github-pages` environment in your repository settings.
+**The workflow WILL FAIL until you configure the environment.** This is a GitHub requirement.
 
-### Steps to Fix Environment Protection Rules:
+### Quick Fix (5 minutes):
 
-1. Go to: `https://github.com/XavierCapmarti/insightboard/settings/environments`
-2. Click on `github-pages` environment (or create it if it doesn't exist)
-3. Under **Deployment branches**, select:
-   - **All branches** OR
-   - **Selected branches** and add `main` to the allowed list
-4. Save the configuration
+1. **Go to repository settings:**
+   ```
+   https://github.com/XavierCapmarti/insightboard/settings/environments
+   ```
+
+2. **Create or edit `github-pages` environment:**
+   - If it doesn't exist: Click "New environment" → Name it `github-pages`
+   - If it exists: Click on `github-pages`
+
+3. **Configure deployment branches:**
+   - Under "Deployment branches"
+   - Select **"All branches"** (easiest)
+   - OR select **"Selected branches"** and add `main`
+   - Click **"Save protection rules"**
+
+4. **Verify:**
+   - Go to Actions: `https://github.com/XavierCapmarti/insightboard/actions`
+   - Re-run the failed workflow or push a new commit
+   - It should now deploy successfully
+
+### Alternative: Use the helper script
+
+Run: `./scripts/fix-github-pages-env.sh` for step-by-step instructions.
 
 ### Alternative: Remove Protection Rules
 
