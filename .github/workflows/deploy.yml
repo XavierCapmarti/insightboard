@@ -48,6 +48,14 @@ jobs:
           GITHUB_PAGES: 'true'
           NODE_ENV: 'production'
 
+      - name: Verify build output
+        run: |
+          echo "Checking build output..."
+          ls -la out/ | head -20
+          test -f out/index.html && echo "✓ index.html exists" || (echo "✗ index.html missing!" && exit 1)
+          test -d out/_next && echo "✓ _next directory exists" || (echo "✗ _next directory missing!" && exit 1)
+          echo "✓ Build output verified"
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
