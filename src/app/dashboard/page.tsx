@@ -39,12 +39,33 @@ interface FunnelStage {
 export default function DashboardPage() {
   const [csvData, setCsvData] = useState<CSVRow[]>([]);
   const [mappings, setMappings] = useState<FieldMapping[]>([]);
-  const [period, setPeriod] = useState<'30' | '90'>('90');
+  const [period, setPeriod] = useState<'30' | '90' | 'all'>('all');
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<FilterState>({});
   
-  // Apply filters to data
-  const filteredData = applyFilters(csvData, mappings, filters);
+  // Apply filters + period to data
+  const filteredData = (() => {
+    let data = applyFilters(csvData, mappings, filters);
+    // Apply period filter (last N days) unless "all" is selected
+    if (period !== 'all') {
+      const dateField = mappings.find(m => m.targetField === 'createdAt');
+      if (dateField && data.length > 0) {
+        const days = parseInt(period);
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - days);
+        const periodFiltered = data.filter(row => {
+          const dateStr = row[dateField.sourceField];
+          if (!dateStr) return true;
+          const d = new Date(dateStr);
+          return isNaN(d.getTime()) || d >= cutoff;
+        });
+        if (periodFiltered.length > 0) {
+          data = periodFiltered;
+        }
+      }
+    }
+    return data;
+  })();
 
   useEffect(() => {
     // Load data from sessionStorage
@@ -71,49 +92,58 @@ export default function DashboardPage() {
     data.forEach(row => {
       const stage = row[statusField.sourceField];
       if (stage) {
-        // Normalize stage names (handle variations like closed_won vs closed won)
         const normalizedStage = stage.toLowerCase().trim().replace(/\s+/g, '_');
         stageCounts[normalizedStage] = (stageCounts[normalizedStage] || 0) + 1;
       }
     });
 
-    // Define stage order (common pipeline stages)
-    const stageOrder = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won'];
-    const orderedStages = stageOrder.filter(s => stageCounts[s] > 0);
-    
-    // Calculate total deals (all stages combined)
+    // Known pipeline stage ordering (used when data matches standard stages)
+    const knownOrder = ['prospecting', 'qualification', 'discovery', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
+
+    // Build ordered stages: use known order for recognized stages, append unknown stages before terminal stages
+    const recognizedStages = knownOrder.filter(s => stageCounts[s] > 0);
+    const unknownStages = Object.keys(stageCounts).filter(s => !knownOrder.includes(s)).sort((a, b) => stageCounts[b] - stageCounts[a]);
+
+    // Insert unknown stages before any "closed" stages
+    const terminalIdx = recognizedStages.findIndex(s => s.startsWith('closed'));
+    let orderedStages: string[];
+    if (terminalIdx >= 0) {
+      orderedStages = [
+        ...recognizedStages.slice(0, terminalIdx),
+        ...unknownStages,
+        ...recognizedStages.slice(terminalIdx),
+      ];
+    } else {
+      orderedStages = [...recognizedStages, ...unknownStages];
+    }
+
+    // Filter out closed_lost from funnel visualization (it's not a forward progression)
+    const funnelStages = orderedStages.filter(s => s !== 'closed_lost');
+
     const totalDeals = data.length;
-    if (totalDeals === 0) return [];
-    
+    if (totalDeals === 0 || funnelStages.length === 0) return [];
+
     const funnel: FunnelStage[] = [];
-    orderedStages.forEach((stage, index) => {
+    funnelStages.forEach((stage, index) => {
       const count = stageCounts[stage];
-      
-      // For snapshot data: calculate cumulative conversion
-      // Assume all deals started at first stage and progressed sequentially
-      // Conversion rate: % of total deals that reached this stage or later
-      const reachedThisStageOrLater = orderedStages.slice(index).reduce((sum, s) => sum + stageCounts[s], 0);
+      const reachedThisStageOrLater = funnelStages.slice(index).reduce((sum, s) => sum + stageCounts[s], 0);
       const conversionRate = totalDeals > 0 ? (reachedThisStageOrLater / totalDeals) * 100 : 0;
-      
-      // Drop-off rate: % of deals that reached previous stage but didn't reach this stage
+
       if (index === 0) {
-        // First stage: all deals start here
         funnel.push({
-          stage: stage.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          stage: stage.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
           count,
-          conversionRate: 100, // All deals start here
+          conversionRate: 100,
           dropoffRate: 0,
         });
       } else {
-        // Calculate how many deals reached the previous stage
-        const prevStageReached = orderedStages.slice(index - 1).reduce((sum, s) => sum + stageCounts[s], 0);
-        // Drop-off = deals that reached previous stage but didn't reach this stage
-        const dropoffRate = prevStageReached > 0 
-          ? ((prevStageReached - reachedThisStageOrLater) / prevStageReached) * 100 
+        const prevStageReached = funnelStages.slice(index - 1).reduce((sum, s) => sum + stageCounts[s], 0);
+        const dropoffRate = prevStageReached > 0
+          ? ((prevStageReached - reachedThisStageOrLater) / prevStageReached) * 100
           : 0;
-        
+
         funnel.push({
-          stage: stage.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          stage: stage.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
           count,
           conversionRate,
           dropoffRate,
@@ -242,11 +272,12 @@ export default function DashboardPage() {
               <Calendar className="w-4 h-4 text-text-tertiary" />
               <select
                 value={period}
-                onChange={(e) => setPeriod(e.target.value as '30' | '90')}
+                onChange={(e) => setPeriod(e.target.value as '30' | '90' | 'all')}
                 className="bg-transparent text-text-primary text-sm border-none outline-none cursor-pointer"
               >
-                <option value="30">Last 30 days</option>
+                <option value="all">All time</option>
                 <option value="90">Last 90 days</option>
+                <option value="30">Last 30 days</option>
               </select>
             </div>
             <Link

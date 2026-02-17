@@ -49,11 +49,18 @@ export { CSVUploadAdapter, createCSVAdapter } from './csv';
 export { GoogleSheetsAdapter, createGoogleSheetsAdapter } from './google-sheets';
 export { GenericCRMAdapter, createGenericCRMAdapter } from './generic-crm';
 
+// Common type aliases (e.g. "csv" → "csv_upload")
+const TYPE_ALIASES: Record<string, string> = {
+  csv: 'csv_upload',
+  sheets: 'google_sheets',
+  crm: 'generic_crm',
+};
+
 /**
  * Get an adapter by type
  */
 export function getAdapter(type: string): DataAdapter | undefined {
-  return adapterRegistry.get(type);
+  return adapterRegistry.get(type) || adapterRegistry.get(TYPE_ALIASES[type] || '');
 }
 
 /**

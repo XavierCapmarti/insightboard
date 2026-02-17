@@ -61,17 +61,23 @@ function OnboardingContent() {
 
   const autoSuggestMappings = (sourceHeaders: string[]): FieldMapping[] => {
     const suggestions: FieldMapping[] = [];
-    
+
     sourceHeaders.forEach(header => {
       const lower = header.toLowerCase();
       let target = '';
       let required = false;
-      
-      // Auto-match common patterns
+
+      // Auto-match common patterns (more specific patterns first)
       if (lower.includes('stage') || lower.includes('status') || lower.includes('state')) {
         target = 'status';
         required = true;
-      } else if (lower.includes('created') || lower.includes('date') || lower.includes('timestamp')) {
+      } else if (lower.includes('closed') || lower.includes('close_date') || lower.includes('won_date')) {
+        target = 'closedAt';
+        required = false;
+      } else if (lower.includes('updated') || lower.includes('modified') || lower.includes('last_activity')) {
+        target = 'updatedAt';
+        required = false;
+      } else if (lower.includes('created') || lower.includes('open_date') || lower.includes('start_date') || lower.includes('timestamp')) {
         target = 'createdAt';
         required = true;
       } else if (lower.includes('owner') || lower.includes('assigned') || lower.includes('person') || lower.includes('rep')) {
@@ -81,16 +87,15 @@ function OnboardingContent() {
         target = 'value';
         required = false;
       }
-      
-      if (target) {
-        suggestions.push({
-          sourceField: header,
-          targetField: target,
-          required,
-        });
-      }
+
+      // Always add an entry for every header so manual mapping works
+      suggestions.push({
+        sourceField: header,
+        targetField: target,
+        required,
+      });
     });
-    
+
     return suggestions;
   };
 
@@ -392,6 +397,7 @@ function OnboardingContent() {
                         <option value="status">Stage/Status</option>
                         <option value="createdAt">Date (Created)</option>
                         <option value="updatedAt">Date (Updated)</option>
+                        <option value="closedAt">Date (Closed)</option>
                         <option value="ownerId">Owner/Person</option>
                         <option value="value">Value/Amount</option>
                       </select>
