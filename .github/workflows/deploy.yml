@@ -119,11 +119,4 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        run: |
-          echo "🚀 Deploying to GitHub Pages..."
-          echo "Environment: github-pages"
-        continue-on-error: false
-
-      - name: Deploy Pages
         uses: actions/deploy-pages@v4
-        id: deployment
